@@ -1,3 +1,7 @@
-# Peakbench
+# Peakben
 
-Peakbench is a benchmarking tool used to benchmark processes. Current support is for **Linux** only.
+Peakben is a benchmarking tool used to benchmark the **memory usage** of a process.
+
+## Support
+
+Current support is for **Linux** only.
