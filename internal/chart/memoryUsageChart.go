@@ -40,6 +40,7 @@ func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
 			Subtitle: "The memory usage of the process",
 		}),
 		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", Start: 0, End: 80}),
+		charts.WithLegendOpts(opts.Legend{Show: true}),
 	)
 
 	lineData := m.GetLineData()
