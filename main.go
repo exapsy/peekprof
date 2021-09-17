@@ -22,8 +22,8 @@ func main() {
 
 	flag.Parse()
 
-	var ecmd *exec.Cmd
-	usePid := false
+	var ecmd *exec.Cmd // The command executed if -pid is not given
+	usePid := false    // Inspect another running process if true
 
 	if pidPtr != nil && *pidPtr > 1 {
 		usePid = true
@@ -41,10 +41,15 @@ func main() {
 		if err != nil {
 			panic(fmt.Errorf("failed to start command: %w", err))
 		}
+
 		parentProcessPid := &ecmd.Process.Pid
+
+		// Wait to make sure the child is running
 		for range time.Tick(time.Millisecond * 1000) {
 			break
 		}
+		// Get the child of "bash -c"
+		// we don't want to benchmark "bash -c", but the command it executed
 		pidPtr = getChildProcessPid(*parentProcessPid)
 	}
 
