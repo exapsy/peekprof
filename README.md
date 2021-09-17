@@ -18,6 +18,20 @@ peakben -pid 47123 -out out.html
 peakben -cmd="go test -bench=. -benchtime 300x" -out out.html
 ```
 
+### Change refresh rate
+
+**Refresh every 3 seconds:**
+
+```sh
+peakben -pid 53432 -out out.html -refresh 3s
+```
+
+**Refresh every 1 minute:**
+
+```sh
+peakben -pid 53432 -out out.html -refresh 3s
+```
+
 ## Support
 
 Current support is for **Linux** only.

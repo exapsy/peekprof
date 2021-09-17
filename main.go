@@ -19,6 +19,7 @@ func main() {
 	pidPtr := flag.Int("pid", 0, "PID of the process")
 	cmdPtr := flag.String("cmd", "", "Command to run")
 	outPtr := flag.String("out", "out.html", "HTML file output path for the line chart")
+	refreshInterval := flag.String("refresh", "1s", "Command to run")
 
 	flag.Parse()
 
@@ -54,10 +55,11 @@ func main() {
 	}
 
 	a := NewApp(&AppOptions{
-		PID:            int32(*pidPtr),
-		RunsExecutable: !usePid,
-		Cmd:            ecmd,
-		Out:            *outPtr,
+		PID:             int32(*pidPtr),
+		RunsExecutable:  !usePid,
+		Cmd:             ecmd,
+		Out:             *outPtr,
+		RefreshInterval: *refreshInterval,
 	})
 	a.Start()
 }

@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,23 +16,27 @@ import (
 )
 
 type App struct {
-	process        *process.Process
-	runsExecutable bool
-	executable     *exec.Cmd
-	ctx            context.Context
-	cancel         context.CancelFunc
-	peakMem        int64
-	outPath        string
+	process         *process.Process
+	runsExecutable  bool
+	executable      *exec.Cmd
+	ctx             context.Context
+	cancel          context.CancelFunc
+	peakMem         int64
+	outPath         string
+	refreshInterval time.Duration
 }
 
 type AppOptions struct {
-	PID            int32
-	RunsExecutable bool
-	Cmd            *exec.Cmd
-	Out            string
+	PID             int32
+	RunsExecutable  bool
+	Cmd             *exec.Cmd
+	Out             string
+	RefreshInterval string
 }
 
 func NewApp(opts *AppOptions) *App {
+	refreshInterval := parseStringToDuration(opts.RefreshInterval)
+
 	p, err := process.NewProcess(opts.PID)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get process: %v", err))
@@ -39,14 +45,46 @@ func NewApp(opts *AppOptions) *App {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &App{
-		runsExecutable: opts.RunsExecutable,
-		process:        p,
-		ctx:            ctx,
-		cancel:         cancel,
-		executable:     opts.Cmd,
-		peakMem:        0,
-		outPath:        opts.Out,
+		runsExecutable:  opts.RunsExecutable,
+		process:         p,
+		ctx:             ctx,
+		cancel:          cancel,
+		executable:      opts.Cmd,
+		peakMem:         0,
+		outPath:         opts.Out,
+		refreshInterval: refreshInterval,
 	}
+}
+
+// parseStringToDuration parses a string of format <amount><unit> to time.Duration
+// Example:
+// 2s becomes 2 * time.Second
+func parseStringToDuration(s string) time.Duration {
+	reg := regexp.MustCompile(`(\d+)(\w)`)
+	arr := reg.FindStringSubmatch(s)
+	if len(arr) != 3 {
+		panic(fmt.Errorf("time %s is not of correct format <amount><unit> (unit: [s: seconds, m: minutes])", s))
+	}
+	amountStr := arr[1]
+	unit := arr[2]
+	var amount int
+	var unitDur time.Duration
+
+	switch unit {
+	case "m":
+		unitDur = time.Minute
+	case "s":
+		unitDur = time.Second
+	default:
+		panic(fmt.Errorf("%s not a valid unit. Provide either 's' (seconds) or 'm' (minutes)", unit))
+	}
+
+	amount, err := strconv.Atoi(amountStr)
+	if err != nil {
+		panic(fmt.Errorf("failed to convert amount to int: %w", err))
+	}
+
+	return time.Duration(amount) * unitDur
 }
 
 func (a *App) Start() {
@@ -74,7 +112,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	chart := chart.NewMemoryUsageChart()
 	go func() {
 		defer wg.Done()
-		ch := a.process.WatchMemoryUsage(1 * time.Second)
+		ch := a.process.WatchMemoryUsage(a.refreshInterval)
 	LOOP:
 		for {
 			select {
