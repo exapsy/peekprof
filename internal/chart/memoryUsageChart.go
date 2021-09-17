@@ -87,6 +87,10 @@ func (m *MemoryUsageChart) GetVszLineData() []opts.LineData {
 
 // DivideTimeIntoParts returns a string formatted time that is divided into parts
 func (m *MemoryUsageChart) DivideTimeIntoParts(parts int) []string {
+	if parts == 0 {
+		return nil
+	}
+
 	partsResult := []string{}
 
 	totalTime := m.To.Sub(m.From)
