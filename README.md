@@ -6,7 +6,7 @@ Peakben is a benchmarking tool used to benchmark the **memory usage** of a proce
 
 ## Usage
 
-The benchmark is designed to run until the running process closes. If you wish to close benchmark sooner, just interrupt the benchmark and it will safely terminate the program and write the results.
+The benchmark is designed to run until the running process terminates. If you wish to terminate benchmark sooner, just interrupt the benchmark and it will safely terminate the program and write the results.
 
 ### Get memory usage by PID
 
