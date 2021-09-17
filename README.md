@@ -29,7 +29,7 @@ peakben -pid 53432 -out out.html -refresh 3s
 **Refresh every 1 minute:**
 
 ```sh
-peakben -pid 53432 -out out.html -refresh 3s
+peakben -pid 53432 -out out.html -refresh 1m
 ```
 
 ## Support
