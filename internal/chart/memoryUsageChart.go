@@ -12,20 +12,22 @@ import (
 
 type MemoryUsageChart struct {
 	// MemoryUsage throughout the whole time
-	MemoryUsage []int64
-	From        time.Time
-	To          time.Time
+	Rss  []int64
+	Vsz  []int64
+	From time.Time
+	To   time.Time
 }
 
 func NewMemoryUsageChart() *MemoryUsageChart {
 	return &MemoryUsageChart{}
 }
 
-func (m *MemoryUsageChart) AddValue(v int64) {
-	if len(m.MemoryUsage) == 0 {
+func (m *MemoryUsageChart) AddValues(rss int64, vsz int64) {
+	if len(m.Rss) == 0 {
 		m.From = time.Now()
 	}
-	m.MemoryUsage = append(m.MemoryUsage, v)
+	m.Rss = append(m.Rss, rss)
+	m.Vsz = append(m.Vsz, vsz)
 }
 
 func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
@@ -43,13 +45,15 @@ func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
 		charts.WithLegendOpts(opts.Legend{Show: true}),
 	)
 
-	lineData := m.GetLineData()
-	timeParts := len(m.MemoryUsage)
+	rssLine := m.GetRssLineData()
+	vszLine := m.GetVszLineData()
+	timeParts := len(m.Rss)
 	timeXAxis := m.DivideTimeIntoParts(timeParts)
 
 	// Put data into instance
 	line.SetXAxis(timeXAxis).
-		AddSeries("Memory Usage", lineData, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
+		AddSeries("RSS Usage", rssLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
+		AddSeries("RSS + Swap", vszLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
 		SetSeriesOptions(
 			charts.WithLineChartOpts(opts.LineChart{Smooth: true}),
 		)
@@ -61,13 +65,22 @@ func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
 func (m *MemoryUsageChart) Reset() {
 	m.From = time.Now()
 	m.To = time.Time{}
-	m.MemoryUsage = []int64{}
+	m.Rss = []int64{}
+	m.Vsz = []int64{}
 }
 
-func (m *MemoryUsageChart) GetLineData() []opts.LineData {
-	items := make([]opts.LineData, len(m.MemoryUsage))
-	for i := 0; i < len(m.MemoryUsage); i++ {
-		items[i] = opts.LineData{Value: m.MemoryUsage[i] / 1024}
+func (m *MemoryUsageChart) GetRssLineData() []opts.LineData {
+	items := make([]opts.LineData, len(m.Rss))
+	for i := 0; i < len(m.Rss); i++ {
+		items[i] = opts.LineData{Value: m.Rss[i] / 1024}
+	}
+	return items
+}
+
+func (m *MemoryUsageChart) GetVszLineData() []opts.LineData {
+	items := make([]opts.LineData, len(m.Vsz))
+	for i := 0; i < len(m.Vsz); i++ {
+		items[i] = opts.LineData{Value: m.Vsz[i] / 1024}
 	}
 	return items
 }

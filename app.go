@@ -117,10 +117,10 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 		for {
 			select {
 			case memUsage := <-ch:
-				fmt.Printf("memory usage: %d mb\n", memUsage/1024)
-				chart.AddValue(memUsage)
-				if memUsage > a.peakMem {
-					a.peakMem = memUsage
+				fmt.Printf("memory usage: %d mb\n", memUsage.Rss/1024)
+				chart.AddValues(memUsage.Rss, memUsage.Vsz)
+				if memUsage.Vsz > a.peakMem {
+					a.peakMem = memUsage.Vsz
 				}
 			case <-a.ctx.Done():
 				a.writeChart(chart)

@@ -112,9 +112,14 @@ func (p *Process) GetPeakMemory() (int64, error) {
 	return s.VmPeakMemory, err
 }
 
-func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan int64 {
-	ch := make(chan int64)
-	go func(ch chan int64) {
+type MemUsage struct {
+	Rss int64
+	Vsz int64
+}
+
+func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan MemUsage {
+	ch := make(chan MemUsage)
+	go func(ch chan MemUsage) {
 		tick := time.NewTicker(interval)
 		defer close(ch)
 		defer tick.Stop()
@@ -123,11 +128,15 @@ func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan int64 {
 			if mu == 0 {
 				break
 			}
+			mus, err := p.GetMemoryUsageWithSwap()
+			if mus == 0 {
+				break
+			}
 			if err != nil {
 				fmt.Printf("failed to get memory usage: %s\n", err)
 				break
 			}
-			ch <- mu
+			ch <- MemUsage{Rss: mu, Vsz: mus}
 		}
 	}(ch)
 	return ch
@@ -137,7 +146,7 @@ func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan int64 {
 // This is calculated from the total RSS from all the libraries and itself
 // that the process uses. RSS includes heap and stack memory, but not swap memory.
 func (p *Process) GetMemoryUsage() (int64, error) {
-	cmd := fmt.Sprintf(`cat %s | grep -i rss |  awk '{Total+=$2} END {print Total""}'`, smapsDir(p.Pid))
+	cmd := fmt.Sprintf(`cat %s | grep -i rss |  awk '{Total+=$2} END {print Total}'`, smapsDir(p.Pid))
 	rss, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
@@ -149,4 +158,27 @@ func (p *Process) GetMemoryUsage() (int64, error) {
 	}
 
 	return int64(memUsage), err
+}
+
+// GetMemoryUsageWithSwap returns the current memory usage in kilobytes of the process.
+// This is calculated from the total memory from all the libraries and itself
+// that the process uses.
+func (p *Process) GetMemoryUsageWithSwap() (int64, error) {
+	cmd := fmt.Sprintf(`cat %s | grep -i swap |  awk '{Total+=$2} END {print Total}'`, smapsDir(p.Pid))
+	rss, err := exec.Command("bash", "-c", cmd).Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
+	}
+
+	swapUsage, err := strconv.Atoi(strings.Trim(string(rss), "\n "))
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert size to int: %w", err)
+	}
+
+	memUsage, err := p.GetMemoryUsage()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get memory usage: %w", err)
+	}
+
+	return memUsage + int64(swapUsage), err
 }
