@@ -13,7 +13,7 @@ peakben -pid 47123 -out out.html
 ### Get memory usage from a running command
 
 ```sh
-peakben -out out.html -cmd="go test -bench=. -benchtime 300x" -out=after.html
+peakben -cmd="go test -bench=. -benchtime 300x" -out=after.html
 ```
 
 ## Support
