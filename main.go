@@ -5,16 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime/trace"
 	"strings"
 )
 
 func main() {
-	traceFile, _ := os.Open("./trace.out")
-	defer traceFile.Close()
-	trace.Start(traceFile)
-	defer trace.Stop()
-
 	flag.Usage = func() {
 		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-out <html output>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]`, os.Args[0])
 		fmt.Println(usage)

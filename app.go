@@ -101,10 +101,10 @@ func (a *App) Start() {
 }
 
 func (a *App) watchExecutable(wg *sync.WaitGroup) {
-	wg.Add(1)
 	if !a.runsExecutable {
 		return
 	}
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		a.executable.Wait()
