@@ -16,7 +16,7 @@ func main() {
 	defer trace.Stop()
 
 	flag.Usage = func() {
-		usage := fmt.Sprintf("Usage: %s <pid | executable path>", os.Args[0])
+		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-out <html output>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]`, os.Args[0])
 		fmt.Println(usage)
 	}
 
@@ -24,6 +24,7 @@ func main() {
 	cmdPtr := flag.String("cmd", "", "Command to run")
 	outPtr := flag.String("out", "out.html", "HTML file output path for the line chart")
 	refreshInterval := flag.String("refresh", "1s", "The interval at which it refreshes the stats of the process")
+	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
 
 	flag.Parse()
 
@@ -43,8 +44,10 @@ func main() {
 
 		args := strings.Fields(*cmdPtr)
 		ecmd = exec.Command(args[0], args[1:]...)
-		// ecmd.Stdout = NewCommandStdout()
-		// ecmd.Stderr = NewCommandStderr()
+		if *printOutput {
+			ecmd.Stdout = NewCommandStdout()
+			ecmd.Stderr = NewCommandStderr()
+		}
 		err := ecmd.Start()
 		if err != nil {
 			fmt.Printf("failed to start command: %s\n", err)
