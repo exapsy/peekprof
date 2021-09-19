@@ -60,7 +60,7 @@ func NewApp(opts *AppOptions) *App {
 // Example:
 // 2s becomes 2 * time.Second
 func parseStringToDuration(s string) time.Duration {
-	reg := regexp.MustCompile(`(\d+)(\w)`)
+	reg := regexp.MustCompile(`(\d+)(\w+)`)
 	arr := reg.FindStringSubmatch(s)
 	if len(arr) != 3 {
 		panic(fmt.Errorf("time %s is not of correct format <amount><unit> (unit: [s: seconds, m: minutes])", s))
@@ -71,6 +71,10 @@ func parseStringToDuration(s string) time.Duration {
 	var unitDur time.Duration
 
 	switch unit {
+	case "ms":
+		unitDur = time.Millisecond
+	case "ns":
+		unitDur = time.Nanosecond
 	case "m":
 		unitDur = time.Minute
 	case "s":
@@ -88,8 +92,8 @@ func parseStringToDuration(s string) time.Duration {
 }
 
 func (a *App) Start() {
-	defer os.Exit(0)
 	wg := &sync.WaitGroup{}
+
 	a.catchInterrupt(wg)
 	a.watchMemoryUsage(wg)
 	a.watchExecutable(wg)
@@ -97,26 +101,35 @@ func (a *App) Start() {
 }
 
 func (a *App) watchExecutable(wg *sync.WaitGroup) {
+	wg.Add(1)
 	if !a.runsExecutable {
 		return
 	}
 	go func() {
+		defer wg.Done()
 		a.executable.Wait()
-		fmt.Println("Executable has exited")
-		wg.Add(-2)
+		a.cancel()
 	}()
 }
 
 func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	wg.Add(1)
-	chart := chart.NewMemoryUsageChart()
+	pname, err := a.process.GetName()
+	if err != nil {
+		panic(fmt.Errorf("could not get process name: %w", err))
+	}
+	chart := chart.NewMemoryUsageChart(pname)
 	go func() {
 		defer wg.Done()
+		defer a.cancel()
 		ch := a.process.WatchMemoryUsage(a.refreshInterval)
 	LOOP:
 		for {
 			select {
-			case memUsage := <-ch:
+			case memUsage, ok := <-ch:
+				if !ok {
+					break LOOP
+				}
 				fmt.Printf("memory usage: %d mb\n", memUsage.Rss/1024)
 				chart.AddValues(memUsage.Rss, memUsage.Vsz)
 				if memUsage.Vsz > a.peakMem {
@@ -146,10 +159,17 @@ func (a *App) catchInterrupt(wg *sync.WaitGroup) {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		defer wg.Done()
-		for range c {
-			a.printPeakMemory()
-			a.cancel()
-			break
+	LOOP:
+		for {
+			select {
+			case <-c:
+				a.printPeakMemory()
+				a.cancel()
+				break LOOP
+			case <-a.ctx.Done():
+				a.printPeakMemory()
+				break LOOP
+			}
 		}
 	}()
 }

@@ -11,15 +11,18 @@ import (
 )
 
 type MemoryUsageChart struct {
-	// MemoryUsage throughout the whole time
-	Rss  []int64
+	// ProcessName is the name of the process that the memory is referring to
+	ProcessName string
+	// Rss is the total memory usage of the process without swap
+	Rss []int64
+	// Vsz is rss+swap
 	Vsz  []int64
 	From time.Time
 	To   time.Time
 }
 
-func NewMemoryUsageChart() *MemoryUsageChart {
-	return &MemoryUsageChart{}
+func NewMemoryUsageChart(processName string) *MemoryUsageChart {
+	return &MemoryUsageChart{ProcessName: processName}
 }
 
 func (m *MemoryUsageChart) AddValues(rss int64, vsz int64) {
@@ -38,7 +41,7 @@ func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeWesteros}),
 		charts.WithTitleOpts(opts.Title{
-			Title:    "Memory usage",
+			Title:    fmt.Sprintf("Memory usage of %s", m.ProcessName),
 			Subtitle: "The memory usage of the process",
 		}),
 		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", Start: 0, End: 80}),

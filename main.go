@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
+	"runtime/trace"
 	"strings"
-	"time"
 )
 
 func main() {
+	traceFile, _ := os.Open("./trace.out")
+	defer traceFile.Close()
+	trace.Start(traceFile)
+	defer trace.Stop()
+
 	flag.Usage = func() {
 		usage := fmt.Sprintf("Usage: %s <pid | executable path>", os.Args[0])
 		fmt.Println(usage)
@@ -37,21 +41,18 @@ func main() {
 			return
 		}
 
-		ecmd = exec.Command("bash", "-c", *cmdPtr)
+		args := strings.Fields(*cmdPtr)
+		ecmd = exec.Command(args[0], args[1:]...)
+		// ecmd.Stdout = NewCommandStdout()
+		// ecmd.Stderr = NewCommandStderr()
 		err := ecmd.Start()
 		if err != nil {
-			panic(fmt.Errorf("failed to start command: %w", err))
+			fmt.Printf("failed to start command: %s\n", err)
+			os.Exit(1)
 		}
 
-		parentProcessPid := &ecmd.Process.Pid
-
-		// Wait to make sure the child is running
-		for range time.Tick(time.Millisecond * 1000) {
-			break
-		}
-		// Get the child of "bash -c"
-		// we don't want to benchmark "bash -c", but the command it executed
-		pidPtr = getChildProcessPid(*parentProcessPid)
+		pidPtr = &ecmd.Process.Pid
+		fmt.Printf("running command pid: %d\n", *pidPtr)
 	}
 
 	a := NewApp(&AppOptions{
@@ -64,17 +65,36 @@ func main() {
 	a.Start()
 }
 
-func getChildProcessPid(pid int) *int {
-	cmd := fmt.Sprintf("pgrep -P %d", pid)
-	childrenPids, err := exec.Command("bash", "-c", cmd).Output()
-	if err != nil {
-		panic(err)
-	}
-	pidStr := strings.Split(string(childrenPids), "\n")[0]
-	pidResult, err := strconv.Atoi(pidStr)
-	if err != nil {
-		panic(err)
-	}
+type CommandStdout struct{}
 
-	return &pidResult
+func NewCommandStdout() *CommandStdout {
+	return &CommandStdout{}
+}
+
+func (c *CommandStdout) Write(b []byte) (int, error) {
+	resetColor := []byte("\033[0m\n")
+	tag := []byte("\n\033[1;34m[stdout]\033[0m\t")
+	accentColor := []byte("\033[34m")
+	out := append(tag, accentColor...)
+	out = append(out, b...)
+	out = append(out, resetColor...)
+	n, err := os.Stdout.Write(out)
+	return n, err
+}
+
+type CommandErr struct{}
+
+func NewCommandStderr() *CommandErr {
+	return &CommandErr{}
+}
+
+func (c *CommandErr) Write(b []byte) (int, error) {
+	tag := []byte("\n\033[1;31m[err]\t")
+	accentColor := []byte("\033[31m\033[0m")
+	resetColor := []byte("\033[0m\n")
+	out := append(tag, accentColor...)
+	out = append(out, b...)
+	out = append(out, resetColor...)
+	n, err := os.Stderr.Write(out)
+	return n, err
 }
