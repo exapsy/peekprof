@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -19,6 +20,8 @@ func main() {
 	outPtr := flag.String("out", "out.html", "HTML file output path for the line chart")
 	refreshInterval := flag.String("refresh", "1s", "The interval at which it refreshes the stats of the process")
 	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
+	parent := flag.Bool("parent", false, "benchmark the parent of the process and all its children, only when no cmd is specified")
+	force := flag.Bool("f", false, "force even if the command has errors. This is useful when attempting to benchmark parent but no parent exists")
 
 	flag.Parse()
 
@@ -29,6 +32,19 @@ func main() {
 		usePid = true
 	}
 	if usePid {
+		if *parent {
+			ppid, err := getParentPid(*pidPtr)
+			if !*force {
+				if err != nil {
+					panic(fmt.Errorf("failed getting parent pid: %v", err))
+				} else if ppid == 0 {
+					panic(fmt.Errorf("parent id is 0"))
+				}
+			}
+			if ppid > 0 {
+				pidPtr = &ppid
+			}
+		}
 		fmt.Printf("pid: %d\n", *pidPtr)
 	} else {
 		if cmdPtr == nil || *cmdPtr == "" {
@@ -60,6 +76,21 @@ func main() {
 		RefreshInterval: *refreshInterval,
 	})
 	a.Start()
+}
+
+func getParentPid(pid int) (int, error) {
+	out, err := exec.Command(
+		"bash", "-c",
+		fmt.Sprintf(`cat /proc/%d/status | grep PPid | sed "s/^PPid:\ *\t*\([0-9]*\)/\1/"`, pid),
+	).Output()
+	if err != nil {
+		return 0, fmt.Errorf("process has no parent: %w", err)
+	}
+	ppid, err := strconv.Atoi(strings.Trim(string(out), "\n "))
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert pid to int: %s", err)
+	}
+	return ppid, nil
 }
 
 type CommandStdout struct{}
