@@ -8,6 +8,10 @@ Peakben is a benchmarking tool used to benchmark the **memory usage** of a proce
 
 The benchmark is designed to run until the running process terminates. If you wish to terminate benchmark sooner, just interrupt the benchmark and it will safely terminate the program and write the results.
 
+```md
+Usage: peakbench {-pid <pid>|-cmd <command>} [-out <html output>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]
+```
+
 ### Get memory usage by PID
 
 ```sh
@@ -28,10 +32,16 @@ peakben -cmd="go test -bench=. -benchtime 300x" -out out.html
 peakben -pid 53432 -out out.html -refresh 3s
 ```
 
-**Refresh every 1 minute:**
+**Refresh every 50 nanoseconds:**
 
 ```sh
-peakben -pid 53432 -out out.html -refresh 1m
+peakben -pid 53432 -out out.html -refresh 50ns
+```
+
+### rofile the parent of a process by child pid
+
+```sh
+peakben -pid 53432 -parent
 ```
 
 ## Support
