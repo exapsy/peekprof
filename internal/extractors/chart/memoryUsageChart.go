@@ -23,8 +23,8 @@ type MemoryUsageChart struct {
 	To   time.Time
 }
 
-func NewMemoryUsageChart(processName string) *MemoryUsageChart {
-	return &MemoryUsageChart{ProcessName: processName}
+func NewMemoryUsageChart(processName string, filename string) *MemoryUsageChart {
+	return &MemoryUsageChart{ProcessName: processName, Filename: filename}
 }
 
 func (m *MemoryUsageChart) Add(rss int64, rssswap int64) error {
@@ -37,9 +37,9 @@ func (m *MemoryUsageChart) Add(rss int64, rssswap int64) error {
 }
 
 func (m *MemoryUsageChart) StopAndExtract() error {
-	fs, err := os.Open(m.Filename)
+	fs, err := os.Create(m.Filename)
 	if err != nil {
-		return fmt.Errorf("failed to open file %s: %v", m.Filename, err)
+		return fmt.Errorf("failed to create file %s: %v", m.Filename, err)
 	}
 	defer fs.Close()
 

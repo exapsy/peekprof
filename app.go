@@ -142,15 +142,18 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					a.peakMem = memUsage.Rss
 				}
 			case <-a.ctx.Done():
-				a.writeChart()
+				a.writeFiles()
 				break LOOP
 			}
 		}
 	}()
 }
 
-func (a *App) writeChart() {
-	a.memExtractors.StopAndExtract()
+func (a *App) writeFiles() {
+	err := a.memExtractors.StopAndExtract()
+	if err != nil {
+		panic(fmt.Errorf("failed writing files: %w", err))
+	}
 	fmt.Printf("chart has been written at %s\n", a.outPath)
 }
 

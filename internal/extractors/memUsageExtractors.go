@@ -28,7 +28,7 @@ func NewMemoryDataExtractors(opts ...interface{}) MemoryDataExtractors {
 	for _, opt := range opts {
 		switch opt := opt.(type) {
 		case ChartMemoryDataExtractorOptions:
-			chartExtractor := chart.NewMemoryUsageChart(opt.Name)
+			chartExtractor := chart.NewMemoryUsageChart(opt.Name, opt.Filename)
 			extractors.extractors = append(extractors.extractors, chartExtractor)
 		}
 	}

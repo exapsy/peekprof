@@ -259,7 +259,9 @@ func (p *Process) GetMemoryUsage() (int64, error) {
 		cmd := fmt.Sprintf(`cat %s | grep -i rss |  awk '{Total+=$2} END {print Total}'`, smapsDir(child))
 		rss, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
-			return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
+			if err.Error() != "signal: interrupt" {
+				return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
+			}
 		}
 		rss = []byte(strings.Trim(string(rss), "\n "))
 		if len(rss) == 0 {
@@ -290,7 +292,9 @@ func (p *Process) GetMemoryUsageWithSwap() (int64, error) {
 		cmd := fmt.Sprintf(`cat %s | grep -i swap |  awk '{Total+=$2} END {print Total}'`, smapsDir(child))
 		rss, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
-			return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
+			if err.Error() != "signal: interrupt" {
+				return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
+			}
 		}
 
 		rss = []byte(strings.Trim(string(rss), "\n "))
