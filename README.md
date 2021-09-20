@@ -38,7 +38,7 @@ peakben -pid 53432 -out out.html -refresh 3s
 peakben -pid 53432 -out out.html -refresh 50ns
 ```
 
-### rofile the parent of a process by child pid
+### Profile the parent of a process by child pid
 
 ```sh
 peakben -pid 53432 -parent
