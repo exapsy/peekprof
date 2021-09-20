@@ -2,7 +2,7 @@ package chart
 
 import (
 	"fmt"
-	"io"
+	"os"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -13,6 +13,8 @@ import (
 type MemoryUsageChart struct {
 	// ProcessName is the name of the process that the memory is referring to
 	ProcessName string
+	// Filename is the file to which it extracts the chart
+	Filename string
 	// Rss is the total memory usage of the process without swap
 	Rss []int64
 	// Vsz is rss+swap
@@ -25,15 +27,22 @@ func NewMemoryUsageChart(processName string) *MemoryUsageChart {
 	return &MemoryUsageChart{ProcessName: processName}
 }
 
-func (m *MemoryUsageChart) AddValues(rss int64, vsz int64) {
+func (m *MemoryUsageChart) Add(rss int64, rssswap int64) error {
 	if len(m.Rss) == 0 {
 		m.From = time.Now()
 	}
 	m.Rss = append(m.Rss, rss)
-	m.Vsz = append(m.Vsz, vsz)
+	m.Vsz = append(m.Vsz, rssswap)
+	return nil
 }
 
-func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
+func (m *MemoryUsageChart) StopAndExtract() error {
+	fs, err := os.Open(m.Filename)
+	if err != nil {
+		return fmt.Errorf("failed to open file %s: %v", m.Filename, err)
+	}
+	defer fs.Close()
+
 	m.To = time.Now()
 	// create a new line instance
 	line := charts.NewLine()
@@ -55,14 +64,15 @@ func (m *MemoryUsageChart) StopAndGenerateChart(w io.Writer) {
 
 	// Put data into instance
 	line.SetXAxis(timeXAxis).
-		AddSeries("RSS Usage", rssLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
+		AddSeries("RSS", rssLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
 		AddSeries("RSS + Swap", vszLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
 		SetSeriesOptions(
 			charts.WithLineChartOpts(opts.LineChart{Smooth: true}),
 		)
-	line.Render(w)
+	line.Render(fs)
 
 	m.Reset()
+	return nil
 }
 
 func (m *MemoryUsageChart) Reset() {

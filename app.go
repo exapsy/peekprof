@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/exapsy/peakben/internal/chart"
+	"github.com/exapsy/peakben/internal/extractors"
 	"github.com/exapsy/peakben/internal/process"
 )
 
@@ -24,6 +24,7 @@ type App struct {
 	peakMem         int64
 	outPath         string
 	refreshInterval time.Duration
+	memExtractors   extractors.MemoryDataExtractors
 }
 
 type AppOptions struct {
@@ -44,6 +45,15 @@ func NewApp(opts *AppOptions) *App {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	pname, err := p.GetName()
+	if err != nil {
+		panic(fmt.Errorf("could not get process name: %w", err))
+	}
+
+	memExtractors := extractors.NewMemoryDataExtractors(
+		extractors.NewChartMemoryDataExtractorOptions(pname, opts.Out),
+	)
+
 	return &App{
 		runsExecutable:  opts.RunsExecutable,
 		process:         p,
@@ -53,6 +63,7 @@ func NewApp(opts *AppOptions) *App {
 		peakMem:         0,
 		outPath:         opts.Out,
 		refreshInterval: refreshInterval,
+		memExtractors:   memExtractors,
 	}
 }
 
@@ -114,11 +125,6 @@ func (a *App) watchExecutable(wg *sync.WaitGroup) {
 
 func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	wg.Add(1)
-	pname, err := a.process.GetName()
-	if err != nil {
-		panic(fmt.Errorf("could not get process name: %w", err))
-	}
-	chart := chart.NewMemoryUsageChart(pname)
 	go func() {
 		defer wg.Done()
 		defer a.cancel()
@@ -131,25 +137,20 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					break LOOP
 				}
 				fmt.Printf("memory usage: %d mb\n", memUsage.Rss/1024)
-				chart.AddValues(memUsage.Rss, memUsage.Vsz)
-				if memUsage.Vsz > a.peakMem {
-					a.peakMem = memUsage.Vsz
+				a.memExtractors.Add(memUsage.Rss, memUsage.Vsz)
+				if memUsage.Rss > a.peakMem {
+					a.peakMem = memUsage.Rss
 				}
 			case <-a.ctx.Done():
-				a.writeChart(chart)
+				a.writeChart()
 				break LOOP
 			}
 		}
 	}()
 }
 
-func (a *App) writeChart(chart *chart.MemoryUsageChart) {
-	f, err := os.Create(a.outPath)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	chart.StopAndGenerateChart(f)
+func (a *App) writeChart() {
+	a.memExtractors.StopAndExtract()
 	fmt.Printf("chart has been written at %s\n", a.outPath)
 }
 

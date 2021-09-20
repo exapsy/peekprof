@@ -93,6 +93,7 @@ const (
 type ProcessStatus struct {
 	Name         string
 	VmPeakMemory int64
+	VmSize       int64
 }
 
 // IsRunning sends signal 0, which is a signal for nothing but still performs error checking
@@ -123,6 +124,32 @@ func (p *Process) IsRunning() (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+func getStatus(pid int32) (*ProcessStatus, error) {
+	sf, err := os.Open(statusDir(pid))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open status file: %w", err)
+	}
+	defer sf.Close()
+	smap, err := readStatusMap(sf)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to load process status: %w", err)
+	}
+
+	vmSizeStr := strings.Split(strings.Trim(smap["VmSize"], "\n \t"), " ")[0]
+	vmSize, err := strconv.ParseInt(vmSizeStr, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse VmSize: %w", err)
+	}
+
+	pc := &ProcessStatus{
+		Name:   smap["Name"],
+		VmSize: vmSize,
+	}
+
+	return pc, nil
 }
 
 func (p *Process) GetStatus() (*ProcessStatus, error) {
