@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -29,9 +30,7 @@ func main() {
 		-printoutput Print the corresponding output of the process to stdout & stderr
 		
 		-parent Track the parent of the provided PID. If no parent exists, an error is returned
-						unless -force is provided. If -cmd is provided this is ignored.
-						
-		-force Ignore errors of parent process not existing`,
+						unless -force is provided. If -cmd is provided this is ignored.`,
 			os.Args[0],
 		)
 		fmt.Println(usage)
@@ -44,7 +43,6 @@ func main() {
 	refreshInterval := flag.Duration("refresh", time.Second, "The interval at which it refreshes the stats of the process")
 	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
 	parent := flag.Bool("parent", false, "profile the parent of the process and all its children, only when no cmd is specified")
-	force := flag.Bool("force", false, "force even if the command has errors. This is useful when attempting to profile parent but no parent exists")
 
 	flag.Parse()
 
@@ -62,13 +60,15 @@ func main() {
 	}
 	if usePid {
 		if *parent {
+			if runtime.GOOS != "linux" {
+				panic("-parent is currently supported only in Linux")
+			}
 			ppid, err := getParentPid(*pidPtr)
-			if !*force {
-				if err != nil {
-					panic(fmt.Errorf("failed getting parent pid: %v", err))
-				} else if ppid == 0 {
-					panic(fmt.Errorf("parent id is 0"))
-				}
+			if err != nil {
+				panic(fmt.Errorf("failed getting parent pid: %v", err))
+			}
+			if ppid <= 0 {
+				panic(fmt.Errorf("parent id is non positive"))
 			}
 			if ppid > 0 {
 				pidPtr = &ppid

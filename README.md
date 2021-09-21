@@ -10,7 +10,7 @@ The profiling is designed to run until the running process terminates. If you wi
 
 ```nosyntax
 Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-  [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-force]
+  [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent]
 
   -pid Track a running process
 
@@ -27,8 +27,6 @@ Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>]
   
   -parent Track the parent of the provided PID. If no parent exists, an error is returned
       unless -force is provided. If -cmd is provided this is ignored.
-      
-  -force Ignore errors of parent process not existing
 ```
 
 ### Extract CSV and Chart
@@ -68,3 +66,5 @@ Current support is for **Linux** and **OSX**.
 ### OSX differences
 
 - Swap is not currenty supported, thus it is not shown either in the extracted files.
+- `-parent` is supported only in Linux
+- Linux tracks the process' metrics and the process' metrics, currently this behavior is not implemented for OSX.
