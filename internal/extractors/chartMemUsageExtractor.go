@@ -11,12 +11,17 @@ import (
 )
 
 type ChartMemoryUsageExtractorOptions struct {
-	Name     string
-	Filename string
+	Name         string
+	Filename     string
+	ChartOverlap []charts.Overlaper
 }
 
 func NewChartMemoryUsageExtractorOptions(processName string, filename string) ChartMemoryUsageExtractorOptions {
 	return ChartMemoryUsageExtractorOptions{Name: processName, Filename: filename}
+}
+
+func (o *ChartMemoryUsageExtractorOptions) OverlapChart(c charts.Overlaper) {
+	o.ChartOverlap = append(o.ChartOverlap, c)
 }
 
 type MemoryUsageChart struct {
@@ -24,26 +29,25 @@ type MemoryUsageChart struct {
 	ProcessName string
 	// Filename is the file to which it extracts the chart
 	Filename string
-	// Rss is the total memory usage of the process without swap
-	Rss []int64
-	// RssSwap is the sum of RSS and Swap values of a process
-	RssSwap []int64
+	// Data is the memory usage data
+	Data []MemoryUsageData
 	// From is when the chart was created
 	From time.Time
 	// To is when the chart stopped watching for more data
 	To time.Time
+	// ChartsOverlap are the charts that overlap with this
+	ChartsOverlap []charts.Overlaper
 }
 
-func NewChartMemoryExtractor(processName string, filename string) *MemoryUsageChart {
-	return &MemoryUsageChart{ProcessName: processName, Filename: filename}
+func NewChartMemoryExtractor(processName string, filename string, chartsOverlap []charts.Overlaper) *MemoryUsageChart {
+	return &MemoryUsageChart{ProcessName: processName, Filename: filename, ChartsOverlap: chartsOverlap}
 }
 
 func (m *MemoryUsageChart) Add(data MemoryUsageData) error {
-	if len(m.Rss) == 0 {
+	if len(m.Data) == 0 {
 		m.From = time.Now()
 	}
-	m.Rss = append(m.Rss, data.Rss)
-	m.RssSwap = append(m.RssSwap, data.RssSwap)
+	m.Data = append(m.Data, data)
 	return nil
 }
 
@@ -69,8 +73,8 @@ func (m *MemoryUsageChart) StopAndExtract() error {
 	)
 
 	rssLine := m.GetRssLineData()
-	vszLine := m.GetVszLineData()
-	timeParts := len(m.Rss)
+	vszLine := m.GetRssSwapLineData()
+	timeParts := len(m.Data)
 	timeXAxis := m.DivideTimeIntoParts(timeParts)
 
 	// Put data into instance
@@ -80,6 +84,9 @@ func (m *MemoryUsageChart) StopAndExtract() error {
 		SetSeriesOptions(
 			charts.WithLineChartOpts(opts.LineChart{Smooth: true}),
 		)
+
+	line.Overlap(m.ChartsOverlap...)
+
 	line.Render(fs)
 
 	m.Reset()
@@ -92,22 +99,21 @@ func (m *MemoryUsageChart) StopAndExtract() error {
 func (m *MemoryUsageChart) Reset() {
 	m.From = time.Now()
 	m.To = time.Time{}
-	m.Rss = []int64{}
-	m.RssSwap = []int64{}
+	m.Data = []MemoryUsageData{}
 }
 
 func (m *MemoryUsageChart) GetRssLineData() []opts.LineData {
-	items := make([]opts.LineData, len(m.Rss))
-	for i := 0; i < len(m.Rss); i++ {
-		items[i] = opts.LineData{Value: m.Rss[i] / 1024}
+	items := make([]opts.LineData, len(m.Data))
+	for i := 0; i < len(m.Data); i++ {
+		items[i] = opts.LineData{Value: m.Data[i].Rss / 1024}
 	}
 	return items
 }
 
-func (m *MemoryUsageChart) GetVszLineData() []opts.LineData {
-	items := make([]opts.LineData, len(m.RssSwap))
-	for i := 0; i < len(m.RssSwap); i++ {
-		items[i] = opts.LineData{Value: m.RssSwap[i] / 1024}
+func (m *MemoryUsageChart) GetRssSwapLineData() []opts.LineData {
+	items := make([]opts.LineData, len(m.Data))
+	for i := 0; i < len(m.Data); i++ {
+		items[i] = opts.LineData{Value: m.Data[i].RssSwap / 1024}
 	}
 	return items
 }

@@ -22,7 +22,7 @@ func NewMemoryUsageExtractors(opts ...interface{}) MemoryUsageExtractors {
 	for _, opt := range opts {
 		switch opt := opt.(type) {
 		case ChartMemoryUsageExtractorOptions:
-			chartExtractor := NewChartMemoryExtractor(opt.Name, opt.Filename)
+			chartExtractor := NewChartMemoryExtractor(opt.Name, opt.Filename, opt.ChartOverlap)
 			extractors.extractors = append(extractors.extractors, chartExtractor)
 		case CsvMemoryUsageExtractorOptions:
 			csvExtractor := NewCsvMemoryUsageExtractor(opt.Filename)
