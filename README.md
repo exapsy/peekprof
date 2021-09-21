@@ -64,3 +64,7 @@ peekprof -pid 53432 -parent
 ## Support
 
 Current support is for **Linux** and **OSX**.
+
+### OSX differences
+
+- Swap is not currenty supported, thus it is not shown either in the extracted files.
