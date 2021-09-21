@@ -36,7 +36,9 @@ func NewProcess(pid int32) (Process, error) {
 		process, err := NewLinuxProcess(pid)
 		return process, err
 	case "windows":
+		panic("windows is not currently yet supported")
 	case "darwin":
+		panic("osx is not currently yet supported")
 	}
 	return nil, nil
 }
