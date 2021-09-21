@@ -11,26 +11,26 @@ type CsvMemoryUsageExtractorOptions struct {
 	Filename string
 }
 
-func NewCsvMemoryUsageExtractorOptions(filename string) CsvMemoryUsageExtractorOptions {
+func NewCsvExtractorOptions(filename string) CsvMemoryUsageExtractorOptions {
 	return CsvMemoryUsageExtractorOptions{Filename: filename}
 }
 
 type CsvMemoryUsage struct {
 	Filename string
-	Data     []MemoryUsageData
+	Data     []ProcessStatsData
 }
 
 func NewCsvMemoryUsageExtractor(filename string) *CsvMemoryUsage {
 	return &CsvMemoryUsage{Filename: filename}
 }
 
-func (c *CsvMemoryUsage) Add(data MemoryUsageData) error {
+func (c *CsvMemoryUsage) Add(data ProcessStatsData) error {
 	c.Data = append(c.Data, data)
 	return nil
 }
 
 func (c *CsvMemoryUsage) headers() []string {
-	return []string{"timestamp", "rss kb", "rss+swap kb"}
+	return []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
 }
 
 func (c *CsvMemoryUsage) records() [][]string {
@@ -39,8 +39,9 @@ func (c *CsvMemoryUsage) records() [][]string {
 	for i := 0; i < len(c.Data); i++ {
 		r := []string{
 			c.Data[i].Timestamp.Local().Format(time.RFC3339),
-			fmt.Sprintf("%d", c.Data[i].Rss),
-			fmt.Sprintf("%d", c.Data[i].RssSwap),
+			fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss),
+			fmt.Sprintf("%d", c.Data[i].MemoryUsage.RssSwap),
+			fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage),
 		}
 		records[i] = r
 	}

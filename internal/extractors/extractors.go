@@ -3,26 +3,35 @@ package extractors
 import "time"
 
 type MemoryUsageData struct {
-	Rss       int64
-	RssSwap   int64
-	Timestamp time.Time
+	Rss     int64
+	RssSwap int64
 }
 
-type MemoryUsageExtractor interface {
-	Add(data MemoryUsageData) error
+type CpuUsageData struct {
+	Percentage float32
+}
+
+type ProcessStatsData struct {
+	MemoryUsage MemoryUsageData
+	CpuUsage    CpuUsageData
+	Timestamp   time.Time
+}
+
+type Extractor interface {
+	Add(data ProcessStatsData) error
 	StopAndExtract() error
 }
 
-type MemoryUsageExtractors struct {
-	extractors []MemoryUsageExtractor
+type Extractors struct {
+	extractors []Extractor
 }
 
-func NewMemoryUsageExtractors(opts ...interface{}) MemoryUsageExtractors {
-	extractors := MemoryUsageExtractors{}
+func NewExtractors(opts ...interface{}) Extractors {
+	extractors := Extractors{}
 	for _, opt := range opts {
 		switch opt := opt.(type) {
-		case ChartMemoryUsageExtractorOptions:
-			chartExtractor := NewChartMemoryExtractor(opt.Name, opt.Filename, opt.ChartOverlap)
+		case ChartExtractorOptions:
+			chartExtractor := NewChartExtractor(opt.Name, opt.Filename, opt.ChartOverlap)
 			extractors.extractors = append(extractors.extractors, chartExtractor)
 		case CsvMemoryUsageExtractorOptions:
 			csvExtractor := NewCsvMemoryUsageExtractor(opt.Filename)
@@ -33,7 +42,7 @@ func NewMemoryUsageExtractors(opts ...interface{}) MemoryUsageExtractors {
 	return extractors
 }
 
-func (m *MemoryUsageExtractors) Add(d MemoryUsageData) error {
+func (m *Extractors) Add(d ProcessStatsData) error {
 	for _, e := range m.extractors {
 		if err := e.Add(d); err != nil {
 			return err
@@ -42,7 +51,7 @@ func (m *MemoryUsageExtractors) Add(d MemoryUsageData) error {
 	return nil
 }
 
-func (m *MemoryUsageExtractors) StopAndExtract() error {
+func (m *Extractors) StopAndExtract() error {
 	for _, e := range m.extractors {
 		if err := e.StopAndExtract(); err != nil {
 			return err

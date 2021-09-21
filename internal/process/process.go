@@ -192,37 +192,106 @@ func (p *Process) GetPeakMemory() (int64, error) {
 	return s.VmPeakMemory, err
 }
 
-type MemUsage struct {
+type MemoryUsage struct {
 	Rss     int64
 	RssSwap int64
 }
 
-func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan MemUsage {
-	ch := make(chan MemUsage)
-	go func(ch chan MemUsage) {
+type CpuUsage struct {
+	Percentage float32
+}
+
+type ProcessStats struct {
+	CpuUsage    CpuUsage
+	MemoryUsage MemoryUsage
+}
+
+func (p *Process) WatchStats(interval time.Duration) <-chan ProcessStats {
+	ch := make(chan ProcessStats)
+
+	go func() {
 		if interval == 0 {
-			interval = time.Second
+			panic("refresh interval must be non-zero")
 		}
-		tick := time.NewTicker(interval)
 		defer close(ch)
+
+		tick := time.NewTicker(interval)
 		defer tick.Stop()
+
 		for range tick.C {
-			mu, err := p.GetMemoryUsage()
+			stats, err := p.GetStats()
 			if err != nil {
-				log.Fatalf("failed to get memory usage: %s\n", err)
-				continue
+				log.Fatalf("error getting stats: %v", err)
 			}
-			mus, err := p.GetMemoryUsageWithSwap()
-			if err != nil {
-				continue
-			}
-			if mus == 0 || mu == 0 {
-				continue
-			}
-			ch <- MemUsage{Rss: mu, RssSwap: mus}
+
+			ch <- stats
 		}
-	}(ch)
+	}()
+
 	return ch
+}
+
+func (p *Process) GetStats() (ProcessStats, error) {
+	emptyps := ProcessStats{}
+
+	memUsage, err := p.GetMemoryUsage()
+	if err != nil {
+		return emptyps, fmt.Errorf("failed getting memory usage: %w", err)
+	}
+
+	cpuUsage, err := p.GetCpuUsage()
+	if err != nil {
+		return emptyps, fmt.Errorf("failed getting cpu usage: %w", err)
+	}
+
+	return ProcessStats{
+		MemoryUsage: memUsage,
+		CpuUsage:    cpuUsage,
+	}, nil
+}
+
+func (p *Process) GetCpuUsage() (CpuUsage, error) {
+	emptycpu := CpuUsage{}
+
+	cmd := fmt.Sprintf(`ps -p %d -o %%cpu | awk 'FNR == 2 {gsub(/ /,""); print}'`, p.Pid)
+	out, err := exec.Command("bash", "-c", cmd).Output()
+	if err != nil {
+		return emptycpu, fmt.Errorf("failed to run command: %v", err)
+	}
+
+	if len(out) == 0 {
+		return emptycpu, fmt.Errorf("output from cpu usage command is empty")
+	}
+
+	outStr := strings.Trim(string(out), " \n")
+
+	cpuPercent64, err := strconv.ParseFloat(outStr, 32)
+	if err != nil {
+		return emptycpu, fmt.Errorf("failed to parse output to float: %w", err)
+	}
+	cpuPercent := float32(cpuPercent64)
+
+	return CpuUsage{
+		Percentage: cpuPercent,
+	}, nil
+}
+
+func (p *Process) GetMemoryUsage() (MemoryUsage, error) {
+	emptymu := MemoryUsage{}
+
+	rss, err := p.GetRss()
+	if err != nil {
+		return emptymu, fmt.Errorf("failed getting process rss: %w", err)
+	}
+	rssSwap, err := p.GetRssWithSwap()
+	if err != nil {
+		return emptymu, fmt.Errorf("failed getting process rss with swap: %w", err)
+	}
+
+	return MemoryUsage{
+		Rss:     rss,
+		RssSwap: rssSwap,
+	}, nil
 }
 
 func (p *Process) GetChildrenPids() ([]int32, error) {
@@ -245,10 +314,10 @@ func (p *Process) GetChildrenPids() ([]int32, error) {
 	return pids, nil
 }
 
-// GetMemoryUsage returns the current memory usage in kilobytes of the process.
+// GetRss returns the current memory usage in kilobytes of the process.
 // This is calculated from the total RSS from all the libraries and itself
 // that the process uses. RSS includes heap and stack memory, but not swap memory.
-func (p *Process) GetMemoryUsage() (int64, error) {
+func (p *Process) GetRss() (int64, error) {
 	children, err := p.GetChildrenPids()
 	children = append(children, p.Pid)
 	if err != nil {
@@ -278,10 +347,10 @@ func (p *Process) GetMemoryUsage() (int64, error) {
 	return total, err
 }
 
-// GetMemoryUsageWithSwap returns the current memory usage in kilobytes of the process.
+// GetRssWithSwap returns the current memory usage in kilobytes of the process.
 // This is calculated from the total memory from all the libraries and itself
 // that the process uses.
-func (p *Process) GetMemoryUsageWithSwap() (int64, error) {
+func (p *Process) GetRssWithSwap() (int64, error) {
 	children, err := p.GetChildrenPids()
 	children = append(children, p.Pid)
 	if err != nil {
@@ -307,7 +376,7 @@ func (p *Process) GetMemoryUsageWithSwap() (int64, error) {
 			return 0, fmt.Errorf("failed to convert size to int: %w", err)
 		}
 
-		memUsage, err := p.GetMemoryUsage()
+		memUsage, err := p.GetRss()
 		if err != nil {
 			return 0, fmt.Errorf("failed to get memory and swap usage: %w", err)
 		}

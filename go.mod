@@ -1,4 +1,4 @@
-module github.com/exapsy/peakben
+module github.com/exapsy/peekprof
 
 go 1.17
 

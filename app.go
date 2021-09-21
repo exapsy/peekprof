@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/exapsy/peakben/internal/extractors"
-	"github.com/exapsy/peakben/internal/process"
+	"github.com/exapsy/peekprof/internal/extractors"
+	"github.com/exapsy/peekprof/internal/process"
 )
 
 type App struct {
@@ -23,7 +23,7 @@ type App struct {
 	htmlFilename    string
 	csvFilename     string
 	refreshInterval time.Duration
-	memExtractor    extractors.MemoryUsageExtractors
+	extractor       extractors.Extractors
 }
 
 type AppOptions struct {
@@ -50,15 +50,15 @@ func NewApp(opts *AppOptions) *App {
 
 	memExtractors := []interface{}{}
 	if opts.CsvFilename != "" {
-		csvExtractorOpts := extractors.NewCsvMemoryUsageExtractorOptions(opts.CsvFilename)
+		csvExtractorOpts := extractors.NewCsvExtractorOptions(opts.CsvFilename)
 		memExtractors = append(memExtractors, csvExtractorOpts)
 	}
 	if opts.HtmlFilename != "" {
-		chartExtractorOpts := extractors.NewChartMemoryUsageExtractorOptions(pname, opts.HtmlFilename)
+		chartExtractorOpts := extractors.NewChartExtractorOptions(pname, opts.HtmlFilename)
 		memExtractors = append(memExtractors, chartExtractorOpts)
 	}
 
-	memExtractor := extractors.NewMemoryUsageExtractors(memExtractors...)
+	extractor := extractors.NewExtractors(memExtractors...)
 
 	return &App{
 		runsExecutable:  opts.RunsExecutable,
@@ -70,7 +70,7 @@ func NewApp(opts *AppOptions) *App {
 		htmlFilename:    opts.HtmlFilename,
 		csvFilename:     opts.CsvFilename,
 		refreshInterval: opts.RefreshInterval,
-		memExtractor:    memExtractor,
+		extractor:       extractor,
 	}
 }
 
@@ -100,22 +100,27 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		defer a.cancel()
-		ch := a.process.WatchMemoryUsage(a.refreshInterval)
+		ch := a.process.WatchStats(a.refreshInterval)
 	LOOP:
 		for {
 			select {
-			case memUsage, ok := <-ch:
+			case pstats, ok := <-ch:
 				if !ok {
 					break LOOP
 				}
-				fmt.Printf("memory usage: %d mb\n", memUsage.Rss/1024)
-				a.memExtractor.Add(extractors.MemoryUsageData{
-					Rss:       memUsage.Rss,
-					RssSwap:   memUsage.RssSwap,
+				fmt.Printf("memory usage: %d mb\n", pstats.MemoryUsage.Rss/1024)
+				a.extractor.Add(extractors.ProcessStatsData{
+					MemoryUsage: extractors.MemoryUsageData{
+						Rss:     pstats.MemoryUsage.Rss,
+						RssSwap: pstats.MemoryUsage.RssSwap,
+					},
+					CpuUsage: extractors.CpuUsageData{
+						Percentage: pstats.CpuUsage.Percentage,
+					},
 					Timestamp: time.Now(),
 				})
-				if memUsage.Rss > a.peakMem {
-					a.peakMem = memUsage.Rss
+				if pstats.MemoryUsage.Rss > a.peakMem {
+					a.peakMem = pstats.MemoryUsage.Rss
 				}
 			case <-a.ctx.Done():
 				a.writeFiles()
@@ -126,7 +131,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 }
 
 func (a *App) writeFiles() {
-	err := a.memExtractor.StopAndExtract()
+	err := a.extractor.StopAndExtract()
 	if err != nil {
 		panic(fmt.Errorf("failed writing files: %w", err))
 	}

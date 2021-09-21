@@ -1,6 +1,6 @@
-# Peakben
+# Peekprof
 
-Peakben is a benchmarking tool used to benchmark the **memory usage** of a process.
+Peekprof is a benchmarking tool used to profile process.
 
 ![Chart page](https://user-images.githubusercontent.com/9019120/134160444-e0db5160-14a5-460f-8d39-2737e246482d.png)
 
@@ -9,7 +9,7 @@ Peakben is a benchmarking tool used to benchmark the **memory usage** of a proce
 The benchmark is designed to run until the running process terminates. If you wish to terminate benchmark sooner, just interrupt the benchmark and it will safely terminate the program and write the results.
 
 ```nosyntax
-Usage: peakben {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
+Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
   [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-force]
 
   -pid Track a running process
@@ -34,31 +34,31 @@ Usage: peakben {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] 
 ### Extract CSV and Chart
 
 ```sh
-peakben -pid 47123 -html out.html -csv out.csv
+peekprof -pid 47123 -html out.html -csv out.csv
 ```
 
 ### Get memory usage by PID
 
 ```sh
-peakben -pid 47123
+peekprof -pid 47123
 ```
 
 ### Get memory usage from a running command
 
 ```sh
-peakben -cmd="go test -bench=. -benchtime 300x"
+peekprof -cmd="go test -bench=. -benchtime 300x"
 ```
 
 ### Change refresh rate
 
 ```sh
-peakben -pid 53432 -refresh 50ms # Refresh every 50 milliseconds
+peekprof -pid 53432 -refresh 50ms # Refresh every 50 milliseconds
 ```
 
 ### Profile the parent of a process by child pid
 
 ```sh
-peakben -pid 53432 -parent
+peekprof -pid 53432 -parent
 ```
 
 ## Support
