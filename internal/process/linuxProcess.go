@@ -189,21 +189,9 @@ func (p *LinuxProcess) GetStats() (ProcessStats, error) {
 func (p *LinuxProcess) GetCpuUsage() (CpuUsage, error) {
 	emptycpu := CpuUsage{}
 
-	cmd := fmt.Sprintf(`ps -p %d -o %%cpu | awk 'FNR == 2 {gsub(/ /,""); print}'`, p.Pid)
-	out, err := exec.Command("bash", "-c", cmd).Output()
+	cpuPercent64, err := getPsFloat(p.Pid, "%cpu")
 	if err != nil {
-		return emptycpu, fmt.Errorf("failed to run command: %v", err)
-	}
-
-	if len(out) == 0 {
-		return emptycpu, fmt.Errorf("output from cpu usage command is empty")
-	}
-
-	outStr := strings.Trim(string(out), " \n")
-
-	cpuPercent64, err := strconv.ParseFloat(outStr, 32)
-	if err != nil {
-		return emptycpu, fmt.Errorf("failed to parse output to float: %w", err)
+		return emptycpu, fmt.Errorf("failed to get cpu value: %w", err)
 	}
 	cpuPercent := float32(cpuPercent64)
 

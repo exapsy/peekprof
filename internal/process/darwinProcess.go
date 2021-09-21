@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -75,21 +74,9 @@ func (p *DarwinProcess) GetStats() (ProcessStats, error) {
 func (p *DarwinProcess) GetCpuUsage() (CpuUsage, error) {
 	emptycpu := CpuUsage{}
 
-	cmd := fmt.Sprintf(`ps -p %d -o %%cpu | awk 'FNR == 2 {gsub(/ /,""); print}'`, p.Pid)
-	out, err := exec.Command("bash", "-c", cmd).Output()
+	cpuPercent64, err := getPsFloat(p.Pid, "%cpu")
 	if err != nil {
-		return emptycpu, fmt.Errorf("failed to run command: %v", err)
-	}
-
-	if len(out) == 0 {
-		return emptycpu, fmt.Errorf("output from cpu usage command is empty")
-	}
-
-	outStr := strings.Trim(string(out), " \n")
-
-	cpuPercent64, err := strconv.ParseFloat(outStr, 32)
-	if err != nil {
-		return emptycpu, fmt.Errorf("failed to parse output to float: %w", err)
+		return emptycpu, fmt.Errorf("failed to get cpu value: %w", err)
 	}
 	cpuPercent := float32(cpuPercent64)
 
@@ -97,6 +84,7 @@ func (p *DarwinProcess) GetCpuUsage() (CpuUsage, error) {
 		Percentage: cpuPercent,
 	}, nil
 }
+
 func (p *DarwinProcess) GetMemoryUsage() (MemoryUsage, error) {
 	emptymu := MemoryUsage{}
 
@@ -114,22 +102,11 @@ func (p *DarwinProcess) GetMemoryUsage() (MemoryUsage, error) {
 		RssSwap: rssSwap,
 	}, nil
 }
-func (p *DarwinProcess) GetRss() (int64, error) {
-	cmd := fmt.Sprintf("ps -p %d -o rss", p.Pid)
-	output, err := exec.Command("bash", "-c", cmd).Output()
-	if err != nil {
-		if err.Error() != "signal: interrupt" {
-			return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
-		}
-	}
-	output = []byte(strings.Trim(string(output), "\n "))
-	if len(output) == 0 {
-		return 0, nil
-	}
 
-	rss, err := strconv.ParseInt(string(output), 10, 64)
+func (p *DarwinProcess) GetRss() (int64, error) {
+	rss, err := getPsInt(p.Pid, "rss")
 	if err != nil {
-		return 0, fmt.Errorf("failed to convert output %q to int: %w", output, err)
+		return 0, err
 	}
 
 	return rss, nil
