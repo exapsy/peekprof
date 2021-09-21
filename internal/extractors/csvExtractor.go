@@ -33,9 +33,9 @@ func (c *CsvMemoryUsage) Add(data ProcessStatsData) error {
 func (c *CsvMemoryUsage) headers() []string {
 	var headers []string
 	if runtime.GOOS != "darwin" {
-		headers = []string{"timestamp", "rss kb", "cpu%"}
-	} else {
 		headers = []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
+	} else {
+		headers = []string{"timestamp", "rss kb", "cpu%"}
 	}
 	return headers
 }
