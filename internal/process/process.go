@@ -50,6 +50,9 @@ func NewProcess(pid int32) (Process, error) {
 	}
 }
 
+// getPsString is equivelant of running ps -p %pid -o %psKey.
+// It's a command to get runtime information about a process.
+// It is supported only in Unix like systems, like Linux, FreeBSD and OSX
 func getPsString(pid int32, psKey string) (string, error) {
 	cmd := fmt.Sprintf(`ps -p %d -o %s | awk 'FNR == 2 {gsub(/ /,""); print}'`, pid, psKey)
 	output, err := exec.Command("bash", "-c", cmd).Output()
