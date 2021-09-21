@@ -14,7 +14,7 @@ import (
 )
 
 type App struct {
-	process         *process.Process
+	process         process.Process
 	runsExecutable  bool
 	executable      *exec.Cmd
 	ctx             context.Context
