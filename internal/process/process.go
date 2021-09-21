@@ -22,7 +22,6 @@ type ProcessStats struct {
 
 type Process interface {
 	GetName() (string, error)
-	GetChildrenPids() ([]int32, error)
 	GetStats() (ProcessStats, error)
 	WatchStats(interval time.Duration) <-chan ProcessStats
 	GetCpuUsage() (CpuUsage, error)
@@ -41,7 +40,6 @@ func NewProcess(pid int32) (Process, error) {
 		process, err := NewWindowsProcess(pid)
 		return process, err
 	case "darwin":
-		panic("osx is not currently yet supported")
 		process, err := NewDarwinProcess(pid)
 		return process, err
 	default:
