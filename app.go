@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"regexp"
-	"strconv"
 	"sync"
 	"time"
 
@@ -34,12 +32,10 @@ type AppOptions struct {
 	Cmd             *exec.Cmd
 	HtmlFilename    string
 	CsvFilename     string
-	RefreshInterval string
+	RefreshInterval time.Duration
 }
 
 func NewApp(opts *AppOptions) *App {
-	refreshInterval := parseStringToDuration(opts.RefreshInterval)
-
 	p, err := process.NewProcess(opts.PID)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get process: %v", err))
@@ -73,44 +69,9 @@ func NewApp(opts *AppOptions) *App {
 		peakMem:         0,
 		htmlFilename:    opts.HtmlFilename,
 		csvFilename:     opts.CsvFilename,
-		refreshInterval: refreshInterval,
+		refreshInterval: opts.RefreshInterval,
 		memExtractor:    memExtractor,
 	}
-}
-
-// parseStringToDuration parses a string of format <amount><unit> to time.Duration
-// Example:
-// 2s becomes 2 * time.Second
-func parseStringToDuration(s string) time.Duration {
-	reg := regexp.MustCompile(`(\d+)(\w+)`)
-	arr := reg.FindStringSubmatch(s)
-	if len(arr) != 3 {
-		panic(fmt.Errorf("time %s is not of correct format <amount><unit> (unit: [s: seconds, m: minutes])", s))
-	}
-	amountStr := arr[1]
-	unit := arr[2]
-	var amount int
-	var unitDur time.Duration
-
-	switch unit {
-	case "ms":
-		unitDur = time.Millisecond
-	case "ns":
-		unitDur = time.Nanosecond
-	case "m":
-		unitDur = time.Minute
-	case "s":
-		unitDur = time.Second
-	default:
-		panic(fmt.Errorf("%s not a valid unit. Provide either 's' (seconds) or 'm' (minutes)", unit))
-	}
-
-	amount, err := strconv.Atoi(amountStr)
-	if err != nil {
-		panic(fmt.Errorf("failed to convert amount to int: %w", err))
-	}
-
-	return time.Duration(amount) * unitDur
 }
 
 func (a *App) Start() {

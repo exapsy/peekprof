@@ -9,7 +9,26 @@ Peakben is a benchmarking tool used to benchmark the **memory usage** of a proce
 The benchmark is designed to run until the running process terminates. If you wish to terminate benchmark sooner, just interrupt the benchmark and it will safely terminate the program and write the results.
 
 ```md
-Usage: peakbench {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]
+Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
+  [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-force]
+
+  -pid Track a running process
+
+  -cmd Execute a command and track its memory usage
+
+  -html Extract a chart into an HTML file
+
+  -csv Extract timestamped memory data into a csv
+
+  -refresh The interval at which it checks the memory usage of the process
+       [default is 1 second]
+
+  -printoutput Print the corresponding output of the process to stdout & stderr
+  
+  -parent Track the parent of the provided PID. If no parent exists, an error is returned
+      unless -force is provided. If -cmd is provided this is ignored.
+      
+  -force Ignore errors of parent process not existing
 ```
 
 ### Extract CSV and Chart

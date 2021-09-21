@@ -7,11 +7,33 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
 	flag.Usage = func() {
-		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]`, os.Args[0])
+		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
+		[-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-force]
+
+		-pid Track a running process
+
+		-cmd Execute a command and track its memory usage
+
+		-html Extract a chart into an HTML file
+
+		-csv Extract timestamped memory data into a csv
+
+		-refresh The interval at which it checks the memory usage of the process
+							[default is 1 second]
+
+		-printoutput Print the corresponding output of the process to stdout & stderr
+		
+		-parent Track the parent of the provided PID. If no parent exists, an error is returned
+						unless -force is provided. If -cmd is provided this is ignored.
+						
+		-force Ignore errors of parent process not existing`,
+			os.Args[0],
+		)
 		fmt.Println(usage)
 	}
 
@@ -19,17 +41,23 @@ func main() {
 	cmdPtr := flag.String("cmd", "", "Command to run")
 	htmlPtr := flag.String("html", "", "HTML filename")
 	csvPtr := flag.String("csv", "", "CSV filename")
-	refreshInterval := flag.String("refresh", "1s", "The interval at which it refreshes the stats of the process")
+	refreshInterval := flag.Duration("refresh", time.Second, "The interval at which it refreshes the stats of the process")
 	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
 	parent := flag.Bool("parent", false, "benchmark the parent of the process and all its children, only when no cmd is specified")
-	force := flag.Bool("f", false, "force even if the command has errors. This is useful when attempting to benchmark parent but no parent exists")
+	force := flag.Bool("force", false, "force even if the command has errors. This is useful when attempting to benchmark parent but no parent exists")
 
 	flag.Parse()
 
 	var ecmd *exec.Cmd // The command executed if -pid is not given
 	usePid := false    // Inspect another running process if true
 
-	if pidPtr != nil && *pidPtr > 1 {
+	if *cmdPtr == "" && *pidPtr <= 0 {
+		fmt.Println("A PID or a command should be specified")
+		flag.Usage()
+		return
+	}
+
+	if *pidPtr > 1 {
 		usePid = true
 	}
 	if usePid {
@@ -48,7 +76,7 @@ func main() {
 		}
 		fmt.Printf("pid: %d\n", *pidPtr)
 	} else {
-		if cmdPtr == nil || *cmdPtr == "" {
+		if *cmdPtr == "" {
 			flag.Usage()
 			return
 		}
