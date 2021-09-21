@@ -43,8 +43,8 @@ func main() {
 	csvPtr := flag.String("csv", "", "CSV filename")
 	refreshInterval := flag.Duration("refresh", time.Second, "The interval at which it refreshes the stats of the process")
 	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
-	parent := flag.Bool("parent", false, "benchmark the parent of the process and all its children, only when no cmd is specified")
-	force := flag.Bool("force", false, "force even if the command has errors. This is useful when attempting to benchmark parent but no parent exists")
+	parent := flag.Bool("parent", false, "profile the parent of the process and all its children, only when no cmd is specified")
+	force := flag.Bool("force", false, "force even if the command has errors. This is useful when attempting to profile parent but no parent exists")
 
 	flag.Parse()
 

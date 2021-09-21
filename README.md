@@ -1,12 +1,12 @@
 # Peekprof
 
-Peekprof is a benchmarking tool used to profile process.
+Peekprof is a profiling tool used to profile process.
 
 ![Chart page](https://user-images.githubusercontent.com/9019120/134160444-e0db5160-14a5-460f-8d39-2737e246482d.png)
 
 ## Usage
 
-The benchmark is designed to run until the running process terminates. If you wish to terminate benchmark sooner, just interrupt the benchmark and it will safely terminate the program and write the results.
+The profiling is designed to run until the running process terminates. If you wish to terminate the profiler sooner, just interrupt the process and it will safely terminate the program and write the results.
 
 ```nosyntax
 Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
