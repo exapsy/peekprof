@@ -189,21 +189,9 @@ func (p *LinuxProcess) GetStats() (ProcessStats, error) {
 func (p *LinuxProcess) GetCpuUsage() (CpuUsage, error) {
 	emptycpu := CpuUsage{}
 
-	cmd := fmt.Sprintf(`ps -p %d -o %%cpu | awk 'FNR == 2 {gsub(/ /,""); print}'`, p.Pid)
-	out, err := exec.Command("bash", "-c", cmd).Output()
+	cpuPercent64, err := getPsFloat(p.Pid, "%cpu")
 	if err != nil {
-		return emptycpu, fmt.Errorf("failed to run command: %v", err)
-	}
-
-	if len(out) == 0 {
-		return emptycpu, fmt.Errorf("output from cpu usage command is empty")
-	}
-
-	outStr := strings.Trim(string(out), " \n")
-
-	cpuPercent64, err := strconv.ParseFloat(outStr, 32)
-	if err != nil {
-		return emptycpu, fmt.Errorf("failed to parse output to float: %w", err)
+		return emptycpu, fmt.Errorf("failed to get cpu value: %w", err)
 	}
 	cpuPercent := float32(cpuPercent64)
 
@@ -230,7 +218,7 @@ func (p *LinuxProcess) GetMemoryUsage() (MemoryUsage, error) {
 	}, nil
 }
 
-func (p *LinuxProcess) GetChildrenPids() ([]int32, error) {
+func (p *LinuxProcess) getChildrenPids() ([]int32, error) {
 	cmd := strings.Fields(fmt.Sprintf("pgrep -P %d", p.Pid))
 	pidsBytes, err := exec.Command(cmd[0], cmd[1:]...).Output()
 	if err != nil {
@@ -254,7 +242,7 @@ func (p *LinuxProcess) GetChildrenPids() ([]int32, error) {
 // This is calculated from the total RSS from all the libraries and itself
 // that the process uses. RSS includes heap and stack memory, but not swap memory.
 func (p *LinuxProcess) GetRss() (int64, error) {
-	children, err := p.GetChildrenPids()
+	children, err := p.getChildrenPids()
 	children = append(children, p.Pid)
 	if err != nil {
 		return 0, err
@@ -273,11 +261,11 @@ func (p *LinuxProcess) GetRss() (int64, error) {
 			continue
 		}
 
-		memUsage, err := strconv.Atoi(string(rss))
+		memUsage, err := strconv.ParseInt(string(rss), 10, 64)
 		if err != nil {
 			return 0, fmt.Errorf("failed to convert output %q to int: %w", rss, err)
 		}
-		total = total + int64(memUsage)
+		total = total + memUsage
 	}
 
 	return total, err
@@ -287,7 +275,7 @@ func (p *LinuxProcess) GetRss() (int64, error) {
 // This is calculated from the total memory from all the libraries and itself
 // that the process uses.
 func (p *LinuxProcess) GetRssWithSwap() (int64, error) {
-	children, err := p.GetChildrenPids()
+	children, err := p.getChildrenPids()
 	children = append(children, p.Pid)
 	if err != nil {
 		return 0, err

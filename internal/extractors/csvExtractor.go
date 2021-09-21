@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -30,18 +31,33 @@ func (c *CsvMemoryUsage) Add(data ProcessStatsData) error {
 }
 
 func (c *CsvMemoryUsage) headers() []string {
-	return []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
+	var headers []string
+	if runtime.GOOS != "darwin" {
+		headers = []string{"timestamp", "rss kb", "cpu%"}
+	} else {
+		headers = []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
+	}
+	return headers
 }
 
 func (c *CsvMemoryUsage) records() [][]string {
 	records := make([][]string, len(c.Data))
 
 	for i := 0; i < len(c.Data); i++ {
-		r := []string{
-			c.Data[i].Timestamp.Local().Format(time.RFC3339),
-			fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss),
-			fmt.Sprintf("%d", c.Data[i].MemoryUsage.RssSwap),
-			fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage),
+		var r []string
+		if runtime.GOOS != "darwin" {
+			r = []string{
+				c.Data[i].Timestamp.Local().Format(time.RFC3339),
+				fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss),
+				fmt.Sprintf("%d", c.Data[i].MemoryUsage.RssSwap),
+				fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage),
+			}
+		} else {
+			r = []string{
+				c.Data[i].Timestamp.Local().Format(time.RFC3339),
+				fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss),
+				fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage),
+			}
 		}
 		records[i] = r
 	}

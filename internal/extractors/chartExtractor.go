@@ -3,6 +3,7 @@ package extractors
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -127,17 +128,20 @@ func (m *ChartExtractor) generateMemoryUsageChart() *charts.Line {
 	)
 
 	rssLine := m.getRssLineData()
-	vszLine := m.getRssSwapLineData()
 	timeParts := len(m.Data)
 	timeXAxis := m.DivideTimeIntoParts(timeParts)
 
 	// Put data into instance
 	line.SetXAxis(timeXAxis).
 		AddSeries("RSS", rssLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
-		AddSeries("RSS + Swap", vszLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"})).
 		SetSeriesOptions(
 			charts.WithLineChartOpts(opts.LineChart{Smooth: true}),
 		)
+
+	if runtime.GOOS != "darwin" {
+		rssSwapLine := m.getRssSwapLineData()
+		line.AddSeries("RSS + Swap", rssSwapLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"}))
+	}
 
 	return line
 }
