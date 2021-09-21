@@ -17,7 +17,8 @@ func main() {
 
 	pidPtr := flag.Int("pid", 0, "PID of the process")
 	cmdPtr := flag.String("cmd", "", "Command to run")
-	outPtr := flag.String("out", "out.html", "HTML file output path for the line chart")
+	htmlPtr := flag.String("html", "", "HTML filename")
+	csvPtr := flag.String("csv", "", "CSV filename")
 	refreshInterval := flag.String("refresh", "1s", "The interval at which it refreshes the stats of the process")
 	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
 	parent := flag.Bool("parent", false, "benchmark the parent of the process and all its children, only when no cmd is specified")
@@ -72,7 +73,8 @@ func main() {
 		PID:             int32(*pidPtr),
 		RunsExecutable:  !usePid,
 		Cmd:             ecmd,
-		Out:             *outPtr,
+		HtmlFilename:    *htmlPtr,
+		CsvFilename:     *csvPtr,
 		RefreshInterval: *refreshInterval,
 	})
 	a.Start()

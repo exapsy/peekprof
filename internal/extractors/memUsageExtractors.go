@@ -1,51 +1,48 @@
 package extractors
 
-import "github.com/exapsy/peakben/internal/extractors/chart"
+import "time"
+
+type MemoryUsageData struct {
+	Rss       int64
+	RssSwap   int64
+	Timestamp time.Time
+}
 
 type MemoryUsageExtractor interface {
-	Add(rss int64, rssswap int64) error
+	Add(data MemoryUsageData) error
 	StopAndExtract() error
 }
 
-type ChartMemoryDataExtractorOptions struct {
-	Name     string
-	Filename string
-}
-
-func NewChartMemoryDataExtractorOptions(processName string, filename string) ChartMemoryDataExtractorOptions {
-	return ChartMemoryDataExtractorOptions{Name: processName, Filename: filename}
-}
-
-type CsvMemoryDataExtractorOptions struct {
-}
-
-type MemoryDataExtractors struct {
+type MemoryUsageExtractors struct {
 	extractors []MemoryUsageExtractor
 }
 
-func NewMemoryDataExtractors(opts ...interface{}) MemoryDataExtractors {
-	extractors := MemoryDataExtractors{}
+func NewMemoryUsageExtractors(opts ...interface{}) MemoryUsageExtractors {
+	extractors := MemoryUsageExtractors{}
 	for _, opt := range opts {
 		switch opt := opt.(type) {
-		case ChartMemoryDataExtractorOptions:
-			chartExtractor := chart.NewMemoryUsageChart(opt.Name, opt.Filename)
+		case ChartMemoryUsageExtractorOptions:
+			chartExtractor := NewChartMemoryExtractor(opt.Name, opt.Filename)
 			extractors.extractors = append(extractors.extractors, chartExtractor)
+		case CsvMemoryUsageExtractorOptions:
+			csvExtractor := NewCsvMemoryUsageExtractor(opt.Filename)
+			extractors.extractors = append(extractors.extractors, csvExtractor)
 		}
 	}
 
 	return extractors
 }
 
-func (m *MemoryDataExtractors) Add(rss int64, rssswap int64) error {
+func (m *MemoryUsageExtractors) Add(d MemoryUsageData) error {
 	for _, e := range m.extractors {
-		if err := e.Add(rss, rssswap); err != nil {
+		if err := e.Add(d); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (m *MemoryDataExtractors) StopAndExtract() error {
+func (m *MemoryUsageExtractors) StopAndExtract() error {
 	for _, e := range m.extractors {
 		if err := e.StopAndExtract(); err != nil {
 			return err

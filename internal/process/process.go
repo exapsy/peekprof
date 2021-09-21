@@ -193,8 +193,8 @@ func (p *Process) GetPeakMemory() (int64, error) {
 }
 
 type MemUsage struct {
-	Rss int64
-	Vsz int64
+	Rss     int64
+	RssSwap int64
 }
 
 func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan MemUsage {
@@ -219,7 +219,7 @@ func (p *Process) WatchMemoryUsage(interval time.Duration) <-chan MemUsage {
 			if mus == 0 || mu == 0 {
 				continue
 			}
-			ch <- MemUsage{Rss: mu, Vsz: mus}
+			ch <- MemUsage{Rss: mu, RssSwap: mus}
 		}
 	}(ch)
 	return ch

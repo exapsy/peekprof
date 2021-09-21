@@ -22,16 +22,18 @@ type App struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	peakMem         int64
-	outPath         string
+	htmlFilename    string
+	csvFilename     string
 	refreshInterval time.Duration
-	memExtractors   extractors.MemoryDataExtractors
+	memExtractor    extractors.MemoryUsageExtractors
 }
 
 type AppOptions struct {
 	PID             int32
 	RunsExecutable  bool
 	Cmd             *exec.Cmd
-	Out             string
+	HtmlFilename    string
+	CsvFilename     string
 	RefreshInterval string
 }
 
@@ -50,9 +52,17 @@ func NewApp(opts *AppOptions) *App {
 		panic(fmt.Errorf("could not get process name: %w", err))
 	}
 
-	memExtractors := extractors.NewMemoryDataExtractors(
-		extractors.NewChartMemoryDataExtractorOptions(pname, opts.Out),
-	)
+	memExtractors := []interface{}{}
+	if opts.CsvFilename != "" {
+		csvExtractorOpts := extractors.NewCsvMemoryUsageExtractorOptions(opts.CsvFilename)
+		memExtractors = append(memExtractors, csvExtractorOpts)
+	}
+	if opts.HtmlFilename != "" {
+		chartExtractorOpts := extractors.NewChartMemoryUsageExtractorOptions(pname, opts.HtmlFilename)
+		memExtractors = append(memExtractors, chartExtractorOpts)
+	}
+
+	memExtractor := extractors.NewMemoryUsageExtractors(memExtractors...)
 
 	return &App{
 		runsExecutable:  opts.RunsExecutable,
@@ -61,9 +71,10 @@ func NewApp(opts *AppOptions) *App {
 		cancel:          cancel,
 		executable:      opts.Cmd,
 		peakMem:         0,
-		outPath:         opts.Out,
+		htmlFilename:    opts.HtmlFilename,
+		csvFilename:     opts.CsvFilename,
 		refreshInterval: refreshInterval,
-		memExtractors:   memExtractors,
+		memExtractor:    memExtractor,
 	}
 }
 
@@ -137,7 +148,11 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					break LOOP
 				}
 				fmt.Printf("memory usage: %d mb\n", memUsage.Rss/1024)
-				a.memExtractors.Add(memUsage.Rss, memUsage.Vsz)
+				a.memExtractor.Add(extractors.MemoryUsageData{
+					Rss:       memUsage.Rss,
+					RssSwap:   memUsage.RssSwap,
+					Timestamp: time.Now(),
+				})
 				if memUsage.Rss > a.peakMem {
 					a.peakMem = memUsage.Rss
 				}
@@ -150,11 +165,10 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 }
 
 func (a *App) writeFiles() {
-	err := a.memExtractors.StopAndExtract()
+	err := a.memExtractor.StopAndExtract()
 	if err != nil {
 		panic(fmt.Errorf("failed writing files: %w", err))
 	}
-	fmt.Printf("chart has been written at %s\n", a.outPath)
 }
 
 func (a *App) handleExit(wg *sync.WaitGroup) {

@@ -1,4 +1,4 @@
-package chart
+package extractors
 
 import (
 	"fmt"
@@ -10,6 +10,15 @@ import (
 	"github.com/go-echarts/go-echarts/v2/types"
 )
 
+type ChartMemoryUsageExtractorOptions struct {
+	Name     string
+	Filename string
+}
+
+func NewChartMemoryUsageExtractorOptions(processName string, filename string) ChartMemoryUsageExtractorOptions {
+	return ChartMemoryUsageExtractorOptions{Name: processName, Filename: filename}
+}
+
 type MemoryUsageChart struct {
 	// ProcessName is the name of the process that the memory is referring to
 	ProcessName string
@@ -17,22 +26,24 @@ type MemoryUsageChart struct {
 	Filename string
 	// Rss is the total memory usage of the process without swap
 	Rss []int64
-	// Vsz is rss+swap
-	Vsz  []int64
+	// RssSwap is the sum of RSS and Swap values of a process
+	RssSwap []int64
+	// From is when the chart was created
 	From time.Time
-	To   time.Time
+	// To is when the chart stopped watching for more data
+	To time.Time
 }
 
-func NewMemoryUsageChart(processName string, filename string) *MemoryUsageChart {
+func NewChartMemoryExtractor(processName string, filename string) *MemoryUsageChart {
 	return &MemoryUsageChart{ProcessName: processName, Filename: filename}
 }
 
-func (m *MemoryUsageChart) Add(rss int64, rssswap int64) error {
+func (m *MemoryUsageChart) Add(data MemoryUsageData) error {
 	if len(m.Rss) == 0 {
 		m.From = time.Now()
 	}
-	m.Rss = append(m.Rss, rss)
-	m.Vsz = append(m.Vsz, rssswap)
+	m.Rss = append(m.Rss, data.Rss)
+	m.RssSwap = append(m.RssSwap, data.RssSwap)
 	return nil
 }
 
@@ -72,6 +83,9 @@ func (m *MemoryUsageChart) StopAndExtract() error {
 	line.Render(fs)
 
 	m.Reset()
+
+	fmt.Printf("html chart has been written at %s\n", m.Filename)
+
 	return nil
 }
 
@@ -79,7 +93,7 @@ func (m *MemoryUsageChart) Reset() {
 	m.From = time.Now()
 	m.To = time.Time{}
 	m.Rss = []int64{}
-	m.Vsz = []int64{}
+	m.RssSwap = []int64{}
 }
 
 func (m *MemoryUsageChart) GetRssLineData() []opts.LineData {
@@ -91,9 +105,9 @@ func (m *MemoryUsageChart) GetRssLineData() []opts.LineData {
 }
 
 func (m *MemoryUsageChart) GetVszLineData() []opts.LineData {
-	items := make([]opts.LineData, len(m.Vsz))
-	for i := 0; i < len(m.Vsz); i++ {
-		items[i] = opts.LineData{Value: m.Vsz[i] / 1024}
+	items := make([]opts.LineData, len(m.RssSwap))
+	for i := 0; i < len(m.RssSwap); i++ {
+		items[i] = opts.LineData{Value: m.RssSwap[i] / 1024}
 	}
 	return items
 }
