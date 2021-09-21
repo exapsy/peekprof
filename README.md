@@ -40,27 +40,19 @@ peakben -pid 47123 -html out.html -csv out.csv
 ### Get memory usage by PID
 
 ```sh
-peakben -pid 47123 -html out.html
+peakben -pid 47123
 ```
 
 ### Get memory usage from a running command
 
 ```sh
-peakben -cmd="go test -bench=. -benchtime 300x" -out out.html
+peakben -cmd="go test -bench=. -benchtime 300x"
 ```
 
 ### Change refresh rate
 
-**Refresh every 3 seconds:**
-
 ```sh
-peakben -pid 53432 -html out.html -refresh 3s
-```
-
-**Refresh every 50 nanoseconds:**
-
-```sh
-peakben -pid 53432 -html out.html -refresh 50ns
+peakben -pid 53432 -refresh 50ms # Refresh every 50 milliseconds
 ```
 
 ### Profile the parent of a process by child pid
