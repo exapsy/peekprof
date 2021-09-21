@@ -46,7 +46,7 @@ func NewProcess(pid int32) (Process, error) {
 		process, err := NewDarwinProcess(pid)
 		return process, err
 	default:
-		panic(fmt.Sprintf("%s is not currently yet supported", runtime.GOOS))
+		panic(fmt.Sprintf("%s is not currently supported, yet", runtime.GOOS))
 	}
 }
 
