@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -94,17 +93,9 @@ func (p *DarwinProcess) GetMemoryUsage() (MemoryUsage, error) {
 		return emptymu, fmt.Errorf("failed getting process rss: %w", err)
 	}
 
-	var rssSwap int64
-	if runtime.GOARCH != "darwin" {
-		rssSwap, err = p.GetRssWithSwap()
-		if err != nil {
-			return emptymu, fmt.Errorf("failed getting process rss with swap: %w", err)
-		}
-	}
-
 	return MemoryUsage{
 		Rss:     rss,
-		RssSwap: rssSwap,
+		RssSwap: 0,
 	}, nil
 }
 
