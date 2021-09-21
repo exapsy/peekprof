@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"runtime"
 	"time"
 )
@@ -43,6 +44,7 @@ func NewProcess(pid int32) (Process, error) {
 		panic("osx is not currently yet supported")
 		process, err := NewDarwinProcess(pid)
 		return process, err
+	default:
+		panic(fmt.Sprintf("%s is not currently yet supported", runtime.GOOS))
 	}
-	return nil, nil
 }
