@@ -52,7 +52,6 @@ func NewProcess(pid int32) (Process, error) {
 
 func getPsString(pid int32, psKey string) (string, error) {
 	cmd := fmt.Sprintf(`ps -p %d -o %s | awk 'FNR == 2 {gsub(/ /,""); print}'`, pid, psKey)
-	fmt.Printf("cmd: %s\n", cmd)
 	output, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		if err.Error() != "signal: interrupt" {
