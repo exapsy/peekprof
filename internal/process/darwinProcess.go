@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -92,9 +93,13 @@ func (p *DarwinProcess) GetMemoryUsage() (MemoryUsage, error) {
 	if err != nil {
 		return emptymu, fmt.Errorf("failed getting process rss: %w", err)
 	}
-	rssSwap, err := p.GetRssWithSwap()
-	if err != nil {
-		return emptymu, fmt.Errorf("failed getting process rss with swap: %w", err)
+
+	var rssSwap int64
+	if runtime.GOARCH != "darwin" {
+		rssSwap, err = p.GetRssWithSwap()
+		if err != nil {
+			return emptymu, fmt.Errorf("failed getting process rss with swap: %w", err)
+		}
 	}
 
 	return MemoryUsage{
@@ -112,5 +117,5 @@ func (p *DarwinProcess) GetRss() (int64, error) {
 	return rss, nil
 }
 func (p *DarwinProcess) GetRssWithSwap() (int64, error) {
-	return p.GetRss()
+	return 0, fmt.Errorf("swap value is not supported for OSX")
 }

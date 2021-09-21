@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -30,7 +31,13 @@ func (c *CsvMemoryUsage) Add(data ProcessStatsData) error {
 }
 
 func (c *CsvMemoryUsage) headers() []string {
-	return []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
+	var headers []string
+	if runtime.GOOS != "darwin" {
+		headers = []string{"timestamp", "rss kb", "cpu%"}
+	} else {
+		headers = []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
+	}
+	return headers
 }
 
 func (c *CsvMemoryUsage) records() [][]string {
