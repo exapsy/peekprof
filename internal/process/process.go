@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+type MemoryUsage struct {
+	Rss     int64
+	RssSwap int64
+}
+
+type CpuUsage struct {
+	Percentage float32
+}
+
+type ProcessStats struct {
+	CpuUsage    CpuUsage
+	MemoryUsage MemoryUsage
+}
+
 type Process interface {
 	GetName() (string, error)
 	GetChildrenPids() ([]int32, error)

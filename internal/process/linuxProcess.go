@@ -89,13 +89,13 @@ const (
 	ProcessStateUninterruptibleWait ProcessState = "D"
 )
 
-type processStatus struct {
+type linuxProcessStatus struct {
 	Name         string
 	VmPeakMemory int64
 	VmSize       int64
 }
 
-func getStatus(pid int32) (*processStatus, error) {
+func getStatus(pid int32) (*linuxProcessStatus, error) {
 	sf, err := os.Open(statusDir(pid))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open status file: %w", err)
@@ -113,7 +113,7 @@ func getStatus(pid int32) (*processStatus, error) {
 		return nil, fmt.Errorf("failed to parse VmSize: %w", err)
 	}
 
-	pc := &processStatus{
+	pc := &linuxProcessStatus{
 		Name:   smap["Name"],
 		VmSize: vmSize,
 	}
@@ -121,7 +121,7 @@ func getStatus(pid int32) (*processStatus, error) {
 	return pc, nil
 }
 
-func (p *LinuxProcess) getStatus() (*processStatus, error) {
+func (p *LinuxProcess) getStatus() (*linuxProcessStatus, error) {
 	var smap map[string]string
 	var err error
 	for {
@@ -135,25 +135,11 @@ func (p *LinuxProcess) getStatus() (*processStatus, error) {
 		return nil, fmt.Errorf("failed to load process status: %w", err)
 	}
 
-	pc := &processStatus{
+	pc := &linuxProcessStatus{
 		Name: smap["Name"],
 	}
 
 	return pc, nil
-}
-
-type MemoryUsage struct {
-	Rss     int64
-	RssSwap int64
-}
-
-type CpuUsage struct {
-	Percentage float32
-}
-
-type ProcessStats struct {
-	CpuUsage    CpuUsage
-	MemoryUsage MemoryUsage
 }
 
 func (p *LinuxProcess) WatchStats(interval time.Duration) <-chan ProcessStats {
