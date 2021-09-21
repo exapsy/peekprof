@@ -11,7 +11,7 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-out <html output>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]`, os.Args[0])
+		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput] [-refresh <integer>{ns|ms|s|m}]`, os.Args[0])
 		fmt.Println(usage)
 	}
 
