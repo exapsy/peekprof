@@ -45,19 +45,16 @@ func (c *CsvMemoryUsage) records() [][]string {
 
 	for i := 0; i < len(c.Data); i++ {
 		var r []string
+
+		timestamp := c.Data[i].Timestamp.Local().Format(time.RFC3339)
+		rss := fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss)
+		rssSwap := fmt.Sprintf("%d", c.Data[i].MemoryUsage.RssSwap)
+		cpuPercent := fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage)
+
 		if runtime.GOOS != "darwin" {
-			r = []string{
-				c.Data[i].Timestamp.Local().Format(time.RFC3339),
-				fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss),
-				fmt.Sprintf("%d", c.Data[i].MemoryUsage.RssSwap),
-				fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage),
-			}
+			r = []string{timestamp, rss, rssSwap, cpuPercent}
 		} else {
-			r = []string{
-				c.Data[i].Timestamp.Local().Format(time.RFC3339),
-				fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss),
-				fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage),
-			}
+			r = []string{timestamp, rss, cpuPercent}
 		}
 		records[i] = r
 	}
