@@ -17,7 +17,7 @@ func NewDarwinProcess(pid int32) (*DarwinProcess, error) {
 }
 
 func (p *DarwinProcess) GetName() (string, error) {
-	cmd := fmt.Sprintf("ps -p %d -c -o cmd | awk 'FNR == 2 {print}", p.Pid)
+	cmd := fmt.Sprintf("ps -p %d -c -o cmd | awk 'FNR == 2 {print}'", p.Pid)
 	output, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to execute command: %w", err)
