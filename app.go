@@ -105,7 +105,7 @@ func parseStringToDuration(s string) time.Duration {
 func (a *App) Start() {
 	wg := &sync.WaitGroup{}
 
-	a.catchInterrupt(wg)
+	a.handleExit(wg)
 	a.watchMemoryUsage(wg)
 	a.watchExecutable(wg)
 	wg.Wait()
@@ -157,8 +157,9 @@ func (a *App) writeFiles() {
 	fmt.Printf("chart has been written at %s\n", a.outPath)
 }
 
-func (a *App) catchInterrupt(wg *sync.WaitGroup) {
+func (a *App) handleExit(wg *sync.WaitGroup) {
 	wg.Add(1)
+	startTime := time.Now()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -167,14 +168,15 @@ func (a *App) catchInterrupt(wg *sync.WaitGroup) {
 		for {
 			select {
 			case <-c:
-				a.printPeakMemory()
 				a.cancel()
 				break LOOP
 			case <-a.ctx.Done():
-				a.printPeakMemory()
 				break LOOP
 			}
 		}
+		a.printPeakMemory()
+		totalTime := time.Since(startTime)
+		fmt.Println(totalTime)
 	}()
 }
 

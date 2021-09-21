@@ -107,7 +107,6 @@ func (m *MemoryUsageChart) DivideTimeIntoParts(parts int) []string {
 	partsResult := []string{}
 
 	totalTime := m.To.Sub(m.From)
-	fmt.Println(totalTime)
 	part := totalTime.Milliseconds() / int64(parts) // How much time each part has
 	var t time.Time = m.From
 	for i := 0; i < parts; i++ {
