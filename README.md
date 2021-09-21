@@ -63,4 +63,4 @@ peekprof -pid 53432 -parent
 
 ## Support
 
-Current support is for **Linux** only.
+Current support is for **Linux** and **OSX**.
