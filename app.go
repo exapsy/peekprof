@@ -109,7 +109,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					break LOOP
 				}
 				fmt.Printf("memory usage: %d mb\tcpu usage: %.1f%%\n", pstats.MemoryUsage.Rss/1024, pstats.CpuUsage.Percentage)
-				a.extractor.Add(extractors.ProcessStatsData{
+				err := a.extractor.Add(extractors.ProcessStatsData{
 					MemoryUsage: extractors.MemoryUsageData{
 						Rss:     pstats.MemoryUsage.Rss,
 						RssSwap: pstats.MemoryUsage.RssSwap,
@@ -119,6 +119,9 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					},
 					Timestamp: time.Now(),
 				})
+				if err != nil {
+					fmt.Printf("error while extracting: %s", err)
+				}
 				if pstats.MemoryUsage.Rss > a.peakMem {
 					a.peakMem = pstats.MemoryUsage.Rss
 				}
