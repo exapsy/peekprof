@@ -108,7 +108,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 				if !ok {
 					break LOOP
 				}
-				fmt.Printf("memory usage: %d mb\n", pstats.MemoryUsage.Rss/1024)
+				fmt.Printf("memory usage: %d mb\ncpu usage: %f%%", pstats.MemoryUsage.Rss/1024, pstats.CpuUsage.Percentage)
 				a.extractor.Add(extractors.ProcessStatsData{
 					MemoryUsage: extractors.MemoryUsageData{
 						Rss:     pstats.MemoryUsage.Rss,
