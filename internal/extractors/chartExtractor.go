@@ -174,7 +174,7 @@ func (m *ChartExtractor) generateMemoryUsageChart(withLiveUpdatesListener bool) 
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeWesteros}),
 		charts.WithTitleOpts(opts.Title{
-			Title:    fmt.Sprintf("Memory usage of %s", m.ProcessName),
+			Title:    fmt.Sprintf("Memory usage (mb) of %s", m.ProcessName),
 			Subtitle: "The memory usage of the process",
 		}),
 		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", Start: 0, End: 80}),
@@ -215,8 +215,10 @@ func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
 		const rssSwapData = [];
 		const xAxisData = [];
 		for (const stat of stats) {
-			rssData.push({"value": stat.memoryUsage.rss, "XAxisIndex": 0, "YAxisIndex": 0});
-			rssSwapData.push({"value": stat.memoryUsage.rssSwap, "XAxisIndex": 0, "YAxisIndex": 0});
+			const rss = Math.trunc(stat.memoryUsage.rss / 1024);
+			const rssSwap = Math.trunc(stat.memoryUsage.rssSwap / 1024);
+			rssData.push({"value": rss, "XAxisIndex": 0, "YAxisIndex": 0});
+			rssSwapData.push({"value": rssSwap, "XAxisIndex": 0, "YAxisIndex": 0});
 			xAxisData.push(new Date(stat.timestamp).toISOString().slice(11, 20));
 		}
 		const option = {
