@@ -214,6 +214,7 @@ func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
 		const rssData = [];
 		const rssSwapData = [];
 		const xAxisData = [];
+		const showLastNValues = 25;
 		for (const stat of stats) {
 			const rss = Math.trunc(stat.memoryUsage.rss / 1024);
 			const rssSwap = Math.trunc(stat.memoryUsage.rssSwap / 1024);
@@ -225,17 +226,20 @@ func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
 			"dataZoom":[
 				{
 					"type":"slider",
-					"end": 100
+					"startValue": stats.length - showLastNValues,
+					"endValue": stats.length
 				}
 			],
 			"series":[
 				{
 					"name":"RSS",
 					"data": rssData,
+					"waveAnimation":true,
 				},
 				{
 					"name":"RSS+Swap",
 					"data": rssSwapData,
+					"waveAnimation":true,
 				}
 			],
 			"xAxis":[{"data":xAxisData}],
@@ -256,6 +260,7 @@ func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
 		const stats = JSON.parse(e.data);
 		const data = [];
 		const xAxisData = [];
+		const showLastNValues = 25;
 		for (const stat of stats) {
 			data.push({"value": stat.cpuUsage.percentage.toString(), "XAxisIndex": 0, "YAxisIndex": 0});
 			xAxisData.push(new Date(stat.timestamp).toISOString().slice(11, 20));
@@ -264,17 +269,14 @@ func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
 			"dataZoom":[
 				{
 					"type":"slider",
-					"end": 100
+					"startValue": stats.length - showLastNValues,
+					"endValue": stats.length
 				}
 			],
 			"series":[
 				{
 					"name":"CPU usage",
-					"type":"line",
-					"smooth":true,
-					"waveAnimation":false,
-					"renderLabelForZeroData":false,
-					"selectedMode":false,
+					"waveAnimation":true,
 					"animation":true,
 					"data": data,
 				}
