@@ -28,7 +28,7 @@ func main() {
 							[default is 100ms]
 		
 		-live Combined with -html provides an html file that listens live updates for the process' stats.
-							[default is false]
+							[default is true]
 
 		-livehost Is the host at which the local running server is running. This is used with -live and -html.
 							[default is localhost:8089]
@@ -49,7 +49,7 @@ func main() {
 	refreshInterval := flag.Duration("refresh", 100*time.Millisecond, "The interval at which it refreshes the stats of the process")
 	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
 	parent := flag.Bool("parent", false, "profile the parent of the process and all its children, only when no cmd is specified")
-	live := flag.Bool("live", false, "Combined with -html provides an html file that listens live updates for the process' stats")
+	live := flag.Bool("live", true, "Combined with -html provides an html file that listens live updates for the process' stats")
 	livehost := flag.String("livehost", "localhost:8089", `Is the host at which the local running server is running.
 		This is used with -live and -html. The profiler automatically opens the file in your browser.
 	`)
