@@ -10,7 +10,7 @@ The profiling is designed to run until the running process terminates. If you wi
 
 ```nosyntax
 Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-  [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent]
+  [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-live] [-livehost <host>]
 
   -pid Track a running process
 
@@ -23,9 +23,11 @@ Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>]
   -refresh The interval at which it checks the memory usage of the process
        [default is 100ms]
   
-  -live Is the host at which the local running server is running. This is used with -live and -html.
-        The profiler automatically opens the file in your browser.
-        [default is false]
+  -live Combined with -html provides an html file that listens live updates for the process' stats.
+       [default is true]
+
+  -livehost Is the host at which the local running server is running. This is used with -live and -html.
+       [default is localhost:8089]
 
   -printoutput Print the corresponding output of the process to stdout & stderr
   
