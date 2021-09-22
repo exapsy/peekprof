@@ -205,12 +205,12 @@ func (m *ChartExtractor) generateMemoryUsageChart(withLiveUpdatesListener bool) 
 }
 
 func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
-	js := fmt.Sprintf(`{
+	js := fmt.Sprintf(`
 	console.log("initializing memory event listener");
-	const sseMem = new EventSource('http://%s/process/updates');
+	const sse = new EventSource('http://%s/process/updates');
 	const stats = [];
 
-	sseMem.addEventListener("message", (e) => {
+	sse.addEventListener("message", (e) => {
 		stats.push(JSON.parse(e.data));
 		const rssData = [];
 		const rssSwapData = [];
@@ -246,19 +246,14 @@ func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
 			"xAxis":[{"data":xAxisData}],
 		};
 		goecharts_%s.setOption(option);
-	});
-	}`, m.UpdateLiveListenWSHost, line.ChartID)
+	});`, m.UpdateLiveListenWSHost, line.ChartID)
 
 	line.AddJSFuncs(js)
 }
 
 func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
 	js := fmt.Sprintf(`{
-	console.log("initializing cpu event listener");
-	const sseCpu = new EventSource('http://%s/process/updates');
-	const stats = [];
-
-	sseCpu.addEventListener("message", (e) => {
+	sse.addEventListener("message", (e) => {
 		stats.push(JSON.parse(e.data));
 		const data = [];
 		const xAxisData = [];
@@ -287,7 +282,7 @@ func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
 		};
 		goecharts_%s.setOption(option);
 	});
-	}`, m.UpdateLiveListenWSHost, line.ChartID)
+	}`, line.ChartID)
 
 	line.AddJSFuncs(js)
 }
