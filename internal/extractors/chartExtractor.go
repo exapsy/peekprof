@@ -205,84 +205,88 @@ func (m *ChartExtractor) generateMemoryUsageChart(withLiveUpdatesListener bool) 
 }
 
 func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
+	const isOSX = runtime.GOOS == "darwin"
 	js := fmt.Sprintf(`
 	console.log("initializing memory event listener");
 	const sse = new EventSource('http://%s/process/updates');
-	const stats = [];
+
+	const initializeMemChart = () => {
+		const option = {
+			dataZoom:[{type:"slider", startValue: 0, endValue: 0}],
+			series:[{name:"RSS", waveAnimation:true, animation: true, data: []}],
+			xAxis:[{name: "time", data: []}],
+		};
+		/* If it's not mac show rss+swap */
+		if (!%t) {
+				option.series.push({name:"RSS+Swap", waveAnimation:true, animation: true, data: []});
+		}
+		goecharts_%s.setOption(option);
+	};
+	initializeMemChart();
+
+	let memObjsCounter = 0;
+	const xAxisData = [];
+	const showLastNValues = 25;
 
 	sse.addEventListener("message", (e) => {
-		stats.push(JSON.parse(e.data));
+		const stat = JSON.parse(e.data);
+		memObjsCounter++;
 		const rssData = [];
 		const rssSwapData = [];
-		const xAxisData = [];
-		const showLastNValues = 25;
-		for (const stat of stats) {
-			const rss = Math.trunc(stat.memoryUsage.rss / 1024);
-			const rssSwap = Math.trunc(stat.memoryUsage.rssSwap / 1024);
-			rssData.push({"value": rss, "XAxisIndex": 0, "YAxisIndex": 0});
-			rssSwapData.push({"value": rssSwap, "XAxisIndex": 0, "YAxisIndex": 0});
-			xAxisData.push(new Date(stat.timestamp).toISOString().slice(11, 20));
+
+		const rss = Math.trunc(stat.memoryUsage.rss / 1024);
+		const rssSwap = Math.trunc(stat.memoryUsage.rssSwap / 1024);
+		const timestamp = new Date(stat.timestamp).toISOString().slice(11, 20);
+
+		xAxisData.push(timestamp);
+
+
+		goecharts_%s.appendData({seriesIndex: 0, data: [rss]});
+		/* If it's not OSX add values to rss+swap */
+		if (!%t) {
+			goecharts_%s.appendData({seriesIndex: 1, data: [rssSwap]});
 		}
-		const option = {
-			"dataZoom":[
-				{
-					"type":"slider",
-					"startValue": stats.length - showLastNValues,
-					"endValue": stats.length
-				}
-			],
-			"series":[
-				{
-					"name":"RSS",
-					"data": rssData,
-					"waveAnimation":true,
-				},
-				{
-					"name":"RSS+Swap",
-					"data": rssSwapData,
-					"waveAnimation":true,
-				}
-			],
-			"xAxis":[{"data":xAxisData}],
-		};
-		goecharts_%s.setOption(option);
-	});`, m.UpdateLiveListenWSHost, line.ChartID)
+
+		goecharts_%s.setOption({
+			dataZoom: [{startValue: memObjsCounter - showLastNValues, endValue: memObjsCounter}],
+			xAxis: [{name: "time", data: xAxisData}]
+		});
+	});`, m.UpdateLiveListenWSHost, isOSX, line.ChartID, line.ChartID, isOSX, line.ChartID, line.ChartID)
 
 	line.AddJSFuncs(js)
 }
 
 func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
-	js := fmt.Sprintf(`{
-	sse.addEventListener("message", (e) => {
-		stats.push(JSON.parse(e.data));
-		const data = [];
-		const xAxisData = [];
-		const showLastNValues = 25;
-		for (const stat of stats) {
-			data.push({"value": stat.cpuUsage.percentage.toString(), "XAxisIndex": 0, "YAxisIndex": 0});
-			xAxisData.push(new Date(stat.timestamp).toISOString().slice(11, 20));
-		}
+	js := fmt.Sprintf(`
+	const initializeCpuChart = () => {
 		const option = {
-			"dataZoom":[
-				{
-					"type":"slider",
-					"startValue": stats.length - showLastNValues,
-					"endValue": stats.length
-				}
-			],
-			"series":[
-				{
-					"name":"CPU usage",
-					"waveAnimation":true,
-					"animation":true,
-					"data": data,
-				}
-			],
-			"xAxis":[{"data":xAxisData}],
+			dataZoom:[{ type:"slider", startValue: 0, endValue: 0 }],
+			series:[{ name:"CPU usage", waveAnimation: true, animation: true, data: [] }],
+			xAxis:[{ name: "time", data: [] }]
+		};
+		goecharts_%s.setOption(option);
+	};
+	initializeCpuChart();
+
+	let cpuObjsCounter = 0;
+	let cpuXAxisData = [];
+	sse.addEventListener("message", (e) => {
+		const stat = JSON.parse(e.data);
+		cpuObjsCounter++;
+		const cpuUsagePercentage = stat.cpuUsage.percentage.toString();
+		const timestamp = new Date(stat.timestamp).toISOString().slice(11, 20);
+
+		cpuXAxisData.push(timestamp);
+
+		goecharts_%s.appendData({ seriesIndex: 0, data: [cpuUsagePercentage] });
+
+		const option = {
+			dataZoom:[{ startValue: cpuObjsCounter - showLastNValues, endValue: cpuObjsCounter }],
+			xAxis:[{ name: "time", data: cpuXAxisData }]
 		};
 		goecharts_%s.setOption(option);
 	});
-	}`, line.ChartID)
+	`, line.ChartID, line.ChartID, line.ChartID)
 
 	line.AddJSFuncs(js)
 }
