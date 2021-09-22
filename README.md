@@ -75,4 +75,4 @@ Current support is for **Linux** and **OSX**.
 
 - Swap is not currenty supported, thus it is not shown either in the extracted files.
 - `-parent` is supported only in Linux
-- Linux tracks the process' metrics and the process' metrics, currently this behavior is not implemented for OSX.
+- In Linux, the process and process' children metrics are tracked. Currently this behavior is not implemented for OSX.
