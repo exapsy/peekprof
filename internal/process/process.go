@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -10,23 +11,24 @@ import (
 )
 
 type MemoryUsage struct {
-	Rss     int64
-	RssSwap int64
+	Rss     int64 `json:"rss"`
+	RssSwap int64 `json:"rssSwap"`
 }
 
 type CpuUsage struct {
-	Percentage float32
+	Percentage float32 `json:"percentage"`
 }
 
 type ProcessStats struct {
-	CpuUsage    CpuUsage
-	MemoryUsage MemoryUsage
+	CpuUsage    CpuUsage    `json:"cpuUsage"`
+	MemoryUsage MemoryUsage `json:"memoryUsage"`
+	Timestamp   time.Time   `json:"timestamp"`
 }
 
 type Process interface {
 	GetName() (string, error)
 	GetStats() (ProcessStats, error)
-	WatchStats(interval time.Duration) <-chan ProcessStats
+	WatchStats(ctx context.Context, interval time.Duration) <-chan ProcessStats
 	GetCpuUsage() (CpuUsage, error)
 	GetMemoryUsage() (MemoryUsage, error)
 	GetRss() (int64, error)

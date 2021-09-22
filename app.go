@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -10,29 +13,37 @@ import (
 	"time"
 
 	"github.com/exapsy/peekprof/internal/extractors"
+	httphandler "github.com/exapsy/peekprof/internal/handlers/http"
 	"github.com/exapsy/peekprof/internal/process"
 )
 
 type App struct {
-	process         process.Process
-	runsExecutable  bool
-	executable      *exec.Cmd
-	ctx             context.Context
-	cancel          context.CancelFunc
-	peakMem         int64
-	htmlFilename    string
-	csvFilename     string
-	refreshInterval time.Duration
-	extractor       extractors.Extractors
+	process           process.Process
+	runsExecutable    bool
+	executable        *exec.Cmd
+	ctx               context.Context
+	cancel            context.CancelFunc
+	peakMem           int64
+	htmlFilename      string
+	csvFilename       string
+	refreshInterval   time.Duration
+	extractor         extractors.Extractors
+	chartLiveUpdates  bool
+	host              string
+	eventSourceBroker *httphandler.EventSourceServer
+	server            *http.Server
+	data              []process.ProcessStats
 }
 
 type AppOptions struct {
-	PID             int32
-	RunsExecutable  bool
-	Cmd             *exec.Cmd
-	HtmlFilename    string
-	CsvFilename     string
-	RefreshInterval time.Duration
+	PID              int32
+	Host             string
+	RunsExecutable   bool
+	Cmd              *exec.Cmd
+	HtmlFilename     string
+	CsvFilename      string
+	RefreshInterval  time.Duration
+	ChartLiveUpdates bool
 }
 
 func NewApp(opts *AppOptions) *App {
@@ -48,39 +59,78 @@ func NewApp(opts *AppOptions) *App {
 		panic(fmt.Errorf("could not get process name: %w", err))
 	}
 
-	memExtractors := []interface{}{}
+	if opts.Host == "" {
+		opts.Host = "localhost:8089"
+	}
+
+	exts := []interface{}{}
 	if opts.CsvFilename != "" {
 		csvExtractorOpts := extractors.NewCsvExtractorOptions(opts.CsvFilename)
-		memExtractors = append(memExtractors, csvExtractorOpts)
+		exts = append(exts, csvExtractorOpts)
 	}
 	if opts.HtmlFilename != "" {
 		chartExtractorOpts := extractors.NewChartExtractorOptions(pname, opts.HtmlFilename)
-		memExtractors = append(memExtractors, chartExtractorOpts)
+		if opts.ChartLiveUpdates {
+			chartExtractorOpts.UpdateLive(opts.Host)
+		}
+		exts = append(exts, chartExtractorOpts)
 	}
 
-	extractor := extractors.NewExtractors(memExtractors...)
+	extractor := extractors.NewExtractors(exts...)
+
+	var esb *httphandler.EventSourceServer
+	var server *http.Server
+	if opts.ChartLiveUpdates {
+		esb = httphandler.NewEventSourceServer()
+		h := http.NewServeMux()
+		h.Handle("/process/updates", esb)
+		server = &http.Server{Addr: opts.Host, Handler: h}
+	}
 
 	return &App{
-		runsExecutable:  opts.RunsExecutable,
-		process:         p,
-		ctx:             ctx,
-		cancel:          cancel,
-		executable:      opts.Cmd,
-		peakMem:         0,
-		htmlFilename:    opts.HtmlFilename,
-		csvFilename:     opts.CsvFilename,
-		refreshInterval: opts.RefreshInterval,
-		extractor:       extractor,
+		runsExecutable:    opts.RunsExecutable,
+		process:           p,
+		ctx:               ctx,
+		cancel:            cancel,
+		executable:        opts.Cmd,
+		peakMem:           0,
+		htmlFilename:      opts.HtmlFilename,
+		csvFilename:       opts.CsvFilename,
+		refreshInterval:   opts.RefreshInterval,
+		extractor:         extractor,
+		host:              opts.Host,
+		chartLiveUpdates:  opts.ChartLiveUpdates,
+		eventSourceBroker: esb,
+		server:            server,
 	}
 }
 
 func (a *App) Start() {
 	wg := &sync.WaitGroup{}
 
+	a.startHttpServer(wg)
 	a.handleExit(wg)
 	a.watchMemoryUsage(wg)
 	a.watchExecutable(wg)
 	wg.Wait()
+}
+
+func (a *App) startHttpServer(wg *sync.WaitGroup) {
+	if !a.chartLiveUpdates || a.htmlFilename == "" {
+		return
+	}
+	wg.Add(1)
+	// add wg.done
+	go func() {
+		defer wg.Done()
+		err := a.server.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			return
+		}
+		if err != nil {
+			panic(err)
+		}
+	}()
 }
 
 func (a *App) watchExecutable(wg *sync.WaitGroup) {
@@ -100,7 +150,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		defer a.cancel()
-		ch := a.process.WatchStats(a.refreshInterval)
+		ch := a.process.WatchStats(a.ctx, a.refreshInterval)
 	LOOP:
 		for {
 			select {
@@ -124,6 +174,14 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 				}
 				if pstats.MemoryUsage.Rss > a.peakMem {
 					a.peakMem = pstats.MemoryUsage.Rss
+				}
+				if a.chartLiveUpdates {
+					a.data = append(a.data, pstats)
+					pstatsJson, err := json.Marshal(a.data)
+					if err != nil {
+						panic(fmt.Errorf("[error] could not marshal pstats: %w", err))
+					}
+					a.eventSourceBroker.Notifier <- pstatsJson
 				}
 			case <-a.ctx.Done():
 				a.writeFiles()
@@ -157,6 +215,19 @@ func (a *App) handleExit(wg *sync.WaitGroup) {
 				break LOOP
 			}
 		}
+
+		if a.chartLiveUpdates {
+			// Shut down server
+			ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
+			defer cancel()
+			err := a.server.Shutdown(ctx)
+			if errors.Is(err, context.Canceled) {
+				// Do nothing
+			} else if err != nil {
+				panic(fmt.Errorf("failed shutting down server: %w", err))
+			}
+		}
+
 		a.printPeakMemory()
 		totalTime := time.Since(startTime)
 		fmt.Println(totalTime)

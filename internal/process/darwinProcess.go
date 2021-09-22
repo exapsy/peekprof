@@ -1,8 +1,8 @@
 package process
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -27,7 +27,7 @@ func (p *DarwinProcess) GetName() (string, error) {
 	return outputStr, nil
 }
 
-func (p *DarwinProcess) WatchStats(interval time.Duration) <-chan ProcessStats {
+func (p *DarwinProcess) WatchStats(ctx context.Context, interval time.Duration) <-chan ProcessStats {
 	ch := make(chan ProcessStats)
 
 	go func() {
@@ -39,13 +39,19 @@ func (p *DarwinProcess) WatchStats(interval time.Duration) <-chan ProcessStats {
 		tick := time.NewTicker(interval)
 		defer tick.Stop()
 
-		for range tick.C {
-			stats, err := p.GetStats()
-			if err != nil {
-				log.Fatalf("error getting stats: %v", err)
-			}
+	LOOP:
+		for {
+			select {
+			case <-tick.C:
+				stats, err := p.GetStats()
+				if err != nil {
+					break LOOP
+				}
 
-			ch <- stats
+				ch <- stats
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
@@ -68,6 +74,7 @@ func (p *DarwinProcess) GetStats() (ProcessStats, error) {
 	return ProcessStats{
 		MemoryUsage: memUsage,
 		CpuUsage:    cpuUsage,
+		Timestamp:   time.Now(),
 	}, nil
 }
 

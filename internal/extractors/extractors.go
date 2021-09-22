@@ -31,7 +31,7 @@ func NewExtractors(opts ...interface{}) Extractors {
 	for _, opt := range opts {
 		switch opt := opt.(type) {
 		case ChartExtractorOptions:
-			chartExtractor := NewChartExtractor(opt.Name, opt.Filename, opt.ChartOverlap)
+			chartExtractor := NewChartExtractor(opt)
 			extractors.extractors = append(extractors.extractors, chartExtractor)
 		case CsvMemoryUsageExtractorOptions:
 			csvExtractor := NewCsvMemoryUsageExtractor(opt.Filename)

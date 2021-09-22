@@ -1,10 +1,10 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -142,7 +142,7 @@ func (p *LinuxProcess) getStatus() (*linuxProcessStatus, error) {
 	return pc, nil
 }
 
-func (p *LinuxProcess) WatchStats(interval time.Duration) <-chan ProcessStats {
+func (p *LinuxProcess) WatchStats(ctx context.Context, interval time.Duration) <-chan ProcessStats {
 	ch := make(chan ProcessStats)
 
 	go func() {
@@ -154,13 +154,19 @@ func (p *LinuxProcess) WatchStats(interval time.Duration) <-chan ProcessStats {
 		tick := time.NewTicker(interval)
 		defer tick.Stop()
 
-		for range tick.C {
-			stats, err := p.GetStats()
-			if err != nil {
-				log.Fatalf("error getting stats: %v", err)
-			}
+	LOOP:
+		for {
+			select {
+			case <-tick.C:
+				stats, err := p.GetStats()
+				if err != nil {
+					break LOOP
+				}
 
-			ch <- stats
+				ch <- stats
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
@@ -183,6 +189,7 @@ func (p *LinuxProcess) GetStats() (ProcessStats, error) {
 	return ProcessStats{
 		MemoryUsage: memUsage,
 		CpuUsage:    cpuUsage,
+		Timestamp:   time.Now(),
 	}, nil
 }
 
