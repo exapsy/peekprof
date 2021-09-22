@@ -116,7 +116,7 @@ func (a *App) Start() {
 }
 
 func (a *App) startHttpServer(wg *sync.WaitGroup) {
-	if !a.chartLiveUpdates {
+	if !a.chartLiveUpdates || a.htmlFilename == "" {
 		return
 	}
 	wg.Add(1)
