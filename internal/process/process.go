@@ -10,17 +10,18 @@ import (
 )
 
 type MemoryUsage struct {
-	Rss     int64
-	RssSwap int64
+	Rss     int64 `json:"rss"`
+	RssSwap int64 `json:"rssSwap"`
 }
 
 type CpuUsage struct {
-	Percentage float32
+	Percentage float32 `json:"percentage"`
 }
 
 type ProcessStats struct {
-	CpuUsage    CpuUsage
-	MemoryUsage MemoryUsage
+	CpuUsage    CpuUsage    `json:"cpuUsage"`
+	MemoryUsage MemoryUsage `json:"memoryUsage"`
+	Timestamp   time.Time   `json:"timestamp"`
 }
 
 type Process interface {

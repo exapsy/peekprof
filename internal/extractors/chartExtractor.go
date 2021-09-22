@@ -2,7 +2,10 @@ package extractors
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -13,17 +16,21 @@ import (
 )
 
 type ChartExtractorOptions struct {
-	Name         string
-	Filename     string
-	ChartOverlap []charts.Overlaper
+	ProcessName            string
+	Filename               string
+	UpdateLiveListenWSHost string
 }
 
-func NewChartExtractorOptions(processName string, filename string) ChartExtractorOptions {
-	return ChartExtractorOptions{Name: processName, Filename: filename}
+func NewChartExtractorOptions(processname string, filename string) ChartExtractorOptions {
+	return ChartExtractorOptions{
+		ProcessName: processname,
+		Filename:    filename,
+	}
 }
 
-func (o *ChartExtractorOptions) OverlapChart(c charts.Overlaper) {
-	o.ChartOverlap = append(o.ChartOverlap, c)
+func (o *ChartExtractorOptions) UpdateLive(host string) *ChartExtractorOptions {
+	o.UpdateLiveListenWSHost = host
+	return o
 }
 
 type ChartExtractor struct {
@@ -36,13 +43,54 @@ type ChartExtractor struct {
 	// From is when the chart was created
 	From time.Time
 	// To is when the chart stopped watching for more data
-	To time.Time
-	// ChartsOverlap are the charts that overlap with this
-	ChartsOverlap []charts.Overlaper
+	To                     time.Time
+	UpdateLiveListenWSHost string
+	file                   *os.File
 }
 
-func NewChartExtractor(processName string, filename string, chartsOverlap []charts.Overlaper) *ChartExtractor {
-	return &ChartExtractor{ProcessName: processName, Filename: filename, ChartsOverlap: chartsOverlap}
+func openBrowser(url string) {
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func NewChartExtractor(opts ChartExtractorOptions) *ChartExtractor {
+	fs, err := os.Create(opts.Filename)
+	if err != nil {
+		panic(fmt.Errorf("failed to create file %s: %w", opts.Filename, err))
+	}
+	chartExtractor := &ChartExtractor{
+		ProcessName:            opts.ProcessName,
+		Filename:               opts.Filename,
+		UpdateLiveListenWSHost: opts.UpdateLiveListenWSHost,
+		file:                   fs,
+	}
+
+	// Generate html page for live updates
+	if opts.UpdateLiveListenWSHost != "" {
+		page := chartExtractor.generateChartsPage()
+		page.Render(fs)
+		fpath, err := filepath.Abs(opts.Filename)
+		if err != nil {
+			panic(fmt.Errorf("could not open file in browser: %w", err))
+		}
+		openBrowser(fpath)
+	}
+
+	return chartExtractor
 }
 
 func (m *ChartExtractor) Add(data ProcessStatsData) error {
@@ -50,22 +98,23 @@ func (m *ChartExtractor) Add(data ProcessStatsData) error {
 		m.From = time.Now()
 	}
 	m.Data = append(m.Data, data)
+
 	return nil
 }
 
 func (m *ChartExtractor) StopAndExtract() error {
-	fs, err := os.Create(m.Filename)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s: %v", m.Filename, err)
+	defer m.file.Close()
+	defer m.reset()
+
+	// No need to generate any page, it has already been generated
+	if m.UpdateLiveListenWSHost != "" {
+		return nil
 	}
-	defer fs.Close()
 
 	m.To = time.Now()
 
 	page := m.generateChartsPage()
-	page.Render(fs)
-
-	m.Reset()
+	page.Render(m.file)
 
 	fmt.Printf("html chart has been written at %s\n", m.Filename)
 
@@ -110,6 +159,10 @@ func (m *ChartExtractor) generateCpuUsageChart() *charts.Line {
 			charts.WithLineChartOpts(opts.LineChart{Smooth: true}),
 		)
 
+	if m.UpdateLiveListenWSHost != "" {
+		m.AddCpuLineLiveUpdateJSFuncs(line)
+	}
+
 	return line
 }
 
@@ -140,13 +193,99 @@ func (m *ChartExtractor) generateMemoryUsageChart() *charts.Line {
 
 	if runtime.GOOS != "darwin" {
 		rssSwapLine := m.getRssSwapLineData()
-		line.AddSeries("RSS + Swap", rssSwapLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"}))
+		line.AddSeries("RSS+Swap", rssSwapLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"}))
+	}
+
+	if m.UpdateLiveListenWSHost != "" {
+		m.AddMemoryLineLiveUpdateJSFuncs(line)
 	}
 
 	return line
 }
 
-func (m *ChartExtractor) Reset() {
+func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
+	js := fmt.Sprintf(`{
+	console.log("initializing memory event listener");
+	const sseMem = new EventSource('http://%s/process/updates');
+
+	sseMem.addEventListener("message", (e) => {
+		const stats = JSON.parse(e.data);
+		const rssData = [];
+		const rssSwapData = [];
+		const xAxisData = [];
+		for (const stat of stats) {
+			rssData.push({"value": stat.memoryUsage.rss, "XAxisIndex": 0, "YAxisIndex": 0});
+			rssSwapData.push({"value": stat.memoryUsage.rssSwap, "XAxisIndex": 0, "YAxisIndex": 0});
+			xAxisData.push(new Date(stat.timestamp).toISOString().slice(11, 20));
+		}
+		const option = {
+			"dataZoom":[
+				{
+					"type":"slider",
+					"end": 100
+				}
+			],
+			"series":[
+				{
+					"name":"RSS",
+					"data": rssData,
+				},
+				{
+					"name":"RSS+Swap",
+					"data": rssSwapData,
+				}
+			],
+			"xAxis":[{"data":xAxisData}],
+		};
+		goecharts_%s.setOption(option);
+	});
+	}`, m.UpdateLiveListenWSHost, line.ChartID)
+
+	line.AddJSFuncs(js)
+}
+
+func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
+	js := fmt.Sprintf(`{
+	console.log("initializing cpu event listener");
+	const sseCpu = new EventSource('http://%s/process/updates');
+
+	sseCpu.addEventListener("message", (e) => {
+		const stats = JSON.parse(e.data);
+		const data = [];
+		const xAxisData = [];
+		for (const stat of stats) {
+			data.push({"value": stat.cpuUsage.percentage.toString(), "XAxisIndex": 0, "YAxisIndex": 0});
+			xAxisData.push(new Date(stat.timestamp).toISOString().slice(11, 20));
+		}
+		const option = {
+			"dataZoom":[
+				{
+					"type":"slider",
+					"end": 100
+				}
+			],
+			"series":[
+				{
+					"name":"CPU usage",
+					"type":"line",
+					"smooth":true,
+					"waveAnimation":false,
+					"renderLabelForZeroData":false,
+					"selectedMode":false,
+					"animation":true,
+					"data": data,
+				}
+			],
+			"xAxis":[{"data":xAxisData}],
+		};
+		goecharts_%s.setOption(option);
+	});
+	}`, m.UpdateLiveListenWSHost, line.ChartID)
+
+	line.AddJSFuncs(js)
+}
+
+func (m *ChartExtractor) reset() {
 	m.From = time.Now()
 	m.To = time.Time{}
 	m.Data = []ProcessStatsData{}
@@ -179,7 +318,7 @@ func (m *ChartExtractor) getRssSwapLineData() []opts.LineData {
 // DivideTimeIntoParts returns a string formatted time that is divided into parts
 func (m *ChartExtractor) DivideTimeIntoParts(parts int) []string {
 	if parts == 0 {
-		return nil
+		parts = 1
 	}
 
 	partsResult := []string{}
@@ -189,7 +328,7 @@ func (m *ChartExtractor) DivideTimeIntoParts(parts int) []string {
 	var t time.Time = m.From
 	for i := 0; i < parts; i++ {
 		t = t.Add(time.Millisecond * time.Duration(part))
-		tStr := fmt.Sprintf("%2d:%2d:%2d", t.Hour(), t.Minute(), t.Second())
+		tStr := fmt.Sprintf(t.Format(time.RFC3339)[11:19])
 		partsResult = append(partsResult, tStr)
 	}
 	return partsResult

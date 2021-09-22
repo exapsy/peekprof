@@ -183,6 +183,7 @@ func (p *LinuxProcess) GetStats() (ProcessStats, error) {
 	return ProcessStats{
 		MemoryUsage: memUsage,
 		CpuUsage:    cpuUsage,
+		Timestamp:   time.Now(),
 	}, nil
 }
 

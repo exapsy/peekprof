@@ -21,7 +21,11 @@ Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>]
   -csv Extract timestamped memory data into a csv
 
   -refresh The interval at which it checks the memory usage of the process
-       [default is 1 second]
+       [default is 100ms]
+  
+  -live Is the host at which the local running server is running. This is used with -live and -html.
+        The profiler automatically opens the file in your browser.
+        [default is false]
 
   -printoutput Print the corresponding output of the process to stdout & stderr
   
