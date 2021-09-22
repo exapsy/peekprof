@@ -1,6 +1,9 @@
 package process
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type WindowsProcess struct {
 	Pid int32
@@ -19,7 +22,7 @@ func (p *WindowsProcess) GetChildrenPids() ([]int32, error) {
 func (p *WindowsProcess) GetStats() (ProcessStats, error) {
 	return ProcessStats{}, nil
 }
-func (p *WindowsProcess) WatchStats(interval time.Duration) <-chan ProcessStats {
+func (p *WindowsProcess) WatchStats(ctx context.Context, interval time.Duration) <-chan ProcessStats {
 	ch := make(chan ProcessStats)
 	return ch
 }

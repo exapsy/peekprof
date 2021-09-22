@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -27,7 +28,7 @@ type ProcessStats struct {
 type Process interface {
 	GetName() (string, error)
 	GetStats() (ProcessStats, error)
-	WatchStats(interval time.Duration) <-chan ProcessStats
+	WatchStats(ctx context.Context, interval time.Duration) <-chan ProcessStats
 	GetCpuUsage() (CpuUsage, error)
 	GetMemoryUsage() (MemoryUsage, error)
 	GetRss() (int64, error)

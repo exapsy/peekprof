@@ -106,11 +106,6 @@ func (m *ChartExtractor) StopAndExtract() error {
 	defer m.file.Close()
 	defer m.reset()
 
-	// No need to generate any page, it has already been generated
-	if m.UpdateLiveListenWSHost != "" {
-		return nil
-	}
-
 	m.To = time.Now()
 
 	page := m.generateChartsPage()

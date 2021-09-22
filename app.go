@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -119,12 +119,17 @@ func (a *App) startHttpServer(wg *sync.WaitGroup) {
 	if !a.chartLiveUpdates {
 		return
 	}
+	wg.Add(1)
 	// add wg.done
 	go func() {
-		log.Fatal(a.server.ListenAndServe())
-		// if err := a.server.ListenAndServe(); err != nil {
-		// 	panic(fmt.Errorf("failed to start server: %w", err))
-		// }
+		defer wg.Done()
+		err := a.server.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			return
+		}
+		if err != nil {
+			panic(err)
+		}
 	}()
 }
 
@@ -145,7 +150,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		defer a.cancel()
-		ch := a.process.WatchStats(a.refreshInterval)
+		ch := a.process.WatchStats(a.ctx, a.refreshInterval)
 	LOOP:
 		for {
 			select {
@@ -213,9 +218,12 @@ func (a *App) handleExit(wg *sync.WaitGroup) {
 
 		if a.chartLiveUpdates {
 			// Shut down server
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
 			defer cancel()
-			if err := a.server.Shutdown(ctx); err != nil {
+			err := a.server.Shutdown(ctx)
+			if errors.Is(err, context.Canceled) {
+				// Do nothing
+			} else if err != nil {
 				panic(fmt.Errorf("failed shutting down server: %w", err))
 			}
 		}
