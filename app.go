@@ -32,7 +32,6 @@ type App struct {
 	host              string
 	eventSourceBroker *httphandler.EventSourceServer
 	server            *http.Server
-	data              []process.ProcessStats
 }
 
 type AppOptions struct {
@@ -176,8 +175,7 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					a.peakMem = pstats.MemoryUsage.Rss
 				}
 				if a.chartLiveUpdates {
-					a.data = append(a.data, pstats)
-					pstatsJson, err := json.Marshal(a.data)
+					pstatsJson, err := json.Marshal(pstats)
 					if err != nil {
 						panic(fmt.Errorf("[error] could not marshal pstats: %w", err))
 					}

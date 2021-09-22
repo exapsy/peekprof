@@ -208,9 +208,10 @@ func (m *ChartExtractor) AddMemoryLineLiveUpdateJSFuncs(line *charts.Line) {
 	js := fmt.Sprintf(`{
 	console.log("initializing memory event listener");
 	const sseMem = new EventSource('http://%s/process/updates');
+	const stats = [];
 
 	sseMem.addEventListener("message", (e) => {
-		const stats = JSON.parse(e.data);
+		stats.push(JSON.parse(e.data));
 		const rssData = [];
 		const rssSwapData = [];
 		const xAxisData = [];
@@ -255,9 +256,10 @@ func (m *ChartExtractor) AddCpuLineLiveUpdateJSFuncs(line *charts.Line) {
 	js := fmt.Sprintf(`{
 	console.log("initializing cpu event listener");
 	const sseCpu = new EventSource('http://%s/process/updates');
+	const stats = [];
 
 	sseCpu.addEventListener("message", (e) => {
-		const stats = JSON.parse(e.data);
+		stats.push(JSON.parse(e.data));
 		const data = [];
 		const xAxisData = [];
 		const showLastNValues = 25;
