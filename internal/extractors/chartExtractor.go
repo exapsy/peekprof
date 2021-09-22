@@ -45,7 +45,6 @@ type ChartExtractor struct {
 	// To is when the chart stopped watching for more data
 	To                     time.Time
 	UpdateLiveListenWSHost string
-	file                   *os.File
 }
 
 func openBrowser(url string) {
@@ -69,6 +68,7 @@ func openBrowser(url string) {
 
 func NewChartExtractor(opts ChartExtractorOptions) *ChartExtractor {
 	fs, err := os.Create(opts.Filename)
+	defer fs.Close()
 	if err != nil {
 		panic(fmt.Errorf("failed to create file %s: %w", opts.Filename, err))
 	}
@@ -76,12 +76,11 @@ func NewChartExtractor(opts ChartExtractorOptions) *ChartExtractor {
 		ProcessName:            opts.ProcessName,
 		Filename:               opts.Filename,
 		UpdateLiveListenWSHost: opts.UpdateLiveListenWSHost,
-		file:                   fs,
 	}
 
 	// Generate html page for live updates
 	if opts.UpdateLiveListenWSHost != "" {
-		page := chartExtractor.generateChartsPage()
+		page := chartExtractor.generateChartsPage(true)
 		page.Render(fs)
 		fpath, err := filepath.Abs(opts.Filename)
 		if err != nil {
@@ -103,22 +102,29 @@ func (m *ChartExtractor) Add(data ProcessStatsData) error {
 }
 
 func (m *ChartExtractor) StopAndExtract() error {
-	defer m.file.Close()
+	fs, err := os.Create(m.Filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer fs.Close()
 	defer m.reset()
 
 	m.To = time.Now()
 
-	page := m.generateChartsPage()
-	page.Render(m.file)
+	page := m.generateChartsPage(false)
+	err = page.Render(fs)
+	if err != nil {
+		return fmt.Errorf("failed to write page: %w", err)
+	}
 
 	fmt.Printf("html chart has been written at %s\n", m.Filename)
 
 	return nil
 }
 
-func (m *ChartExtractor) generateChartsPage() *components.Page {
-	memoryUsageChart := m.generateMemoryUsageChart()
-	cpuUsageChart := m.generateCpuUsageChart()
+func (m *ChartExtractor) generateChartsPage(withLiveUpdatesListener bool) *components.Page {
+	memoryUsageChart := m.generateMemoryUsageChart(withLiveUpdatesListener)
+	cpuUsageChart := m.generateCpuUsageChart(withLiveUpdatesListener)
 
 	page := components.NewPage()
 	page.AddCharts(
@@ -129,7 +135,7 @@ func (m *ChartExtractor) generateChartsPage() *components.Page {
 	return page
 }
 
-func (m *ChartExtractor) generateCpuUsageChart() *charts.Line {
+func (m *ChartExtractor) generateCpuUsageChart(withLiveUpdatesListener bool) *charts.Line {
 	// create a new line instance
 	line := charts.NewLine()
 	// set some global options like Title/Legend/ToolTip or anything else
@@ -154,14 +160,14 @@ func (m *ChartExtractor) generateCpuUsageChart() *charts.Line {
 			charts.WithLineChartOpts(opts.LineChart{Smooth: true}),
 		)
 
-	if m.UpdateLiveListenWSHost != "" {
+	if m.UpdateLiveListenWSHost != "" && withLiveUpdatesListener {
 		m.AddCpuLineLiveUpdateJSFuncs(line)
 	}
 
 	return line
 }
 
-func (m *ChartExtractor) generateMemoryUsageChart() *charts.Line {
+func (m *ChartExtractor) generateMemoryUsageChart(withLiveUpdatesListener bool) *charts.Line {
 	// create a new line instance
 	line := charts.NewLine()
 	// set some global options like Title/Legend/ToolTip or anything else
@@ -191,7 +197,7 @@ func (m *ChartExtractor) generateMemoryUsageChart() *charts.Line {
 		line.AddSeries("RSS+Swap", rssSwapLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"}))
 	}
 
-	if m.UpdateLiveListenWSHost != "" {
+	if m.UpdateLiveListenWSHost != "" && withLiveUpdatesListener {
 		m.AddMemoryLineLiveUpdateJSFuncs(line)
 	}
 
