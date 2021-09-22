@@ -14,7 +14,7 @@ import (
 func main() {
 	flag.Usage = func() {
 		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-		[-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent]
+		[-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-live] [-livehost <host>]
 
 		-pid Track a running process
 
