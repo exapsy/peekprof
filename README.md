@@ -3,7 +3,7 @@
 Get the CPU and Memory usage of a **single process**, monitor it live, and extract it in CSV and HTML. Get the best out of your optimizations.
 
 <p align="center">
-  <img width="500" height="612" src="https://user-images.githubusercontent.com/9019120/134310206-83b0eb58-78ac-4e61-9f90-67335acf1375.gif">
+  <img width="500" height="612" src="https://user-images.githubusercontent.com/9019120/134412870-d1713c72-a64f-419a-85c2-1fc67f5471a8.gif">
 </p>
 
 ## Usage
