@@ -1,6 +1,9 @@
 package extractors
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type MemoryUsageData struct {
 	Rss     int64
@@ -34,7 +37,10 @@ func NewExtractors(opts ...interface{}) Extractors {
 			chartExtractor := NewChartExtractor(opt)
 			extractors.extractors = append(extractors.extractors, chartExtractor)
 		case CsvMemoryUsageExtractorOptions:
-			csvExtractor := NewCsvMemoryUsageExtractor(opt.Filename)
+			csvExtractor, err := NewCsvMemoryUsageExtractor(opt.Filename)
+			if err != nil {
+				panic(fmt.Errorf("failed to create csv extractor: %w", err))
+			}
 			extractors.extractors = append(extractors.extractors, csvExtractor)
 		}
 	}

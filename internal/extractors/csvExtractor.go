@@ -17,17 +17,47 @@ func NewCsvExtractorOptions(filename string) CsvMemoryUsageExtractorOptions {
 }
 
 type CsvMemoryUsage struct {
-	Filename string
-	Data     []ProcessStatsData
+	Filename  string
+	Data      []ProcessStatsData
+	file      *os.File
+	csvWriter *csv.Writer
 }
 
-func NewCsvMemoryUsageExtractor(filename string) *CsvMemoryUsage {
-	return &CsvMemoryUsage{Filename: filename}
+func NewCsvMemoryUsageExtractor(filename string) (*CsvMemoryUsage, error) {
+	f, err := os.Create(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create csv file: %w", err)
+	}
+
+	csvWriter := csv.NewWriter(f)
+	csvExtractor := &CsvMemoryUsage{Filename: filename, file: f, csvWriter: csvWriter}
+
+	csvWriter.Write(csvExtractor.headers())
+
+	return csvExtractor, nil
 }
 
 func (c *CsvMemoryUsage) Add(data ProcessStatsData) error {
 	c.Data = append(c.Data, data)
+	c.csvWriter.Write(c.dataToCsvRecord(data))
 	return nil
+}
+
+func (c *CsvMemoryUsage) dataToCsvRecord(data ProcessStatsData) []string {
+	var r []string
+
+	timestamp := data.Timestamp.Local().Format(time.RFC3339)
+	rss := fmt.Sprintf("%d", data.MemoryUsage.Rss)
+	rssSwap := fmt.Sprintf("%d", data.MemoryUsage.RssSwap)
+	cpuPercent := fmt.Sprintf("%.1f", data.CpuUsage.Percentage)
+
+	if runtime.GOOS != "darwin" {
+		r = []string{timestamp, rss, rssSwap, cpuPercent}
+	} else {
+		r = []string{timestamp, rss, cpuPercent}
+	}
+
+	return r
 }
 
 func (c *CsvMemoryUsage) headers() []string {
@@ -40,48 +70,10 @@ func (c *CsvMemoryUsage) headers() []string {
 	return headers
 }
 
-func (c *CsvMemoryUsage) records() [][]string {
-	records := make([][]string, len(c.Data))
-
-	for i := 0; i < len(c.Data); i++ {
-		var r []string
-
-		timestamp := c.Data[i].Timestamp.Local().Format(time.RFC3339)
-		rss := fmt.Sprintf("%d", c.Data[i].MemoryUsage.Rss)
-		rssSwap := fmt.Sprintf("%d", c.Data[i].MemoryUsage.RssSwap)
-		cpuPercent := fmt.Sprintf("%.1f", c.Data[i].CpuUsage.Percentage)
-
-		if runtime.GOOS != "darwin" {
-			r = []string{timestamp, rss, rssSwap, cpuPercent}
-		} else {
-			r = []string{timestamp, rss, cpuPercent}
-		}
-		records[i] = r
-	}
-
-	return records
-}
-
 func (c *CsvMemoryUsage) StopAndExtract() error {
-	f, err := os.Create(c.Filename)
-	if err != nil {
-		return fmt.Errorf("failed to create csv file")
-	}
-	defer f.Close()
-
-	csvWriter := csv.NewWriter(f)
-
-	records := [][]string{
-		c.headers(),
-	}
-	records = append(records, c.records()...)
-
-	err = csvWriter.WriteAll(records)
-	if err != nil {
-		return fmt.Errorf("failed to write records: %v", err)
-	}
-
 	fmt.Printf("csv has been written at %s\n", c.Filename)
+	c.csvWriter.Flush()
+	c.file.Close()
 
 	return nil
 }
