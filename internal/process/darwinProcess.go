@@ -114,6 +114,6 @@ func (p *DarwinProcess) GetRss() (int64, error) {
 
 	return rss, nil
 }
-func (p *DarwinProcess) GetRssWithSwap() (int64, error) {
+func (p *DarwinProcess) GetSwap() (int64, error) {
 	return 0, fmt.Errorf("swap value is not supported for OSX")
 }

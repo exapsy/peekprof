@@ -35,6 +35,6 @@ func (p *WindowsProcess) GetMemoryUsage() (MemoryUsage, error) {
 func (p *WindowsProcess) GetRss() (int64, error) {
 	return 0, nil
 }
-func (p *WindowsProcess) GetRssWithSwap() (int64, error) {
+func (p *WindowsProcess) GetSwap() (int64, error) {
 	return 0, nil
 }

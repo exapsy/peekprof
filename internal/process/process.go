@@ -32,7 +32,7 @@ type Process interface {
 	GetCpuUsage() (CpuUsage, error)
 	GetMemoryUsage() (MemoryUsage, error)
 	GetRss() (int64, error)
-	GetRssWithSwap() (int64, error)
+	GetSwap() (int64, error)
 }
 
 func NewProcess(pid int32) (Process, error) {
