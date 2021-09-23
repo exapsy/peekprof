@@ -214,10 +214,11 @@ func (p *LinuxProcess) GetMemoryUsage() (MemoryUsage, error) {
 	if err != nil {
 		return emptymu, fmt.Errorf("failed getting process rss: %w", err)
 	}
-	rssSwap, err := p.GetRssWithSwap()
+	swap, err := p.GetSwap()
 	if err != nil {
 		return emptymu, fmt.Errorf("failed getting process rss with swap: %w", err)
 	}
+	rssSwap := rss + swap
 
 	return MemoryUsage{
 		Rss:     rss,
@@ -281,7 +282,7 @@ func (p *LinuxProcess) GetRss() (int64, error) {
 // GetRssWithSwap returns the current memory usage in kilobytes of the process.
 // This is calculated from the total memory from all the libraries and itself
 // that the process uses.
-func (p *LinuxProcess) GetRssWithSwap() (int64, error) {
+func (p *LinuxProcess) GetSwap() (int64, error) {
 	children, err := p.getChildrenPids()
 	children = append(children, p.Pid)
 	if err != nil {
@@ -307,11 +308,7 @@ func (p *LinuxProcess) GetRssWithSwap() (int64, error) {
 			return 0, fmt.Errorf("failed to convert size to int: %w", err)
 		}
 
-		memUsage, err := p.GetRss()
-		if err != nil {
-			return 0, fmt.Errorf("failed to get memory and swap usage: %w", err)
-		}
-		total = total + memUsage + int64(swapUsage)
+		total = total + int64(swapUsage)
 	}
 
 	return total, err
