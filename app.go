@@ -182,7 +182,6 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					a.eventSourceBroker.Notifier <- pstatsJson
 				}
 			case <-a.ctx.Done():
-				a.writeFiles()
 				break LOOP
 			}
 		}
@@ -226,6 +225,7 @@ func (a *App) handleExit(wg *sync.WaitGroup) {
 			}
 		}
 
+		a.writeFiles()
 		a.printPeakMemory()
 		totalTime := time.Since(startTime)
 		fmt.Println(totalTime)
