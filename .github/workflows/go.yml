@@ -48,6 +48,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v2
+
       - name: Generate PKGBUILD
         run: ./build/scripts/generate-pkgbuild.py
         env:
