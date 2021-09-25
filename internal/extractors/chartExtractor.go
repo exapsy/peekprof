@@ -68,10 +68,10 @@ func openBrowser(url string) {
 
 func NewChartExtractor(opts ChartExtractorOptions) *ChartExtractor {
 	fs, err := os.Create(opts.Filename)
-	defer fs.Close()
 	if err != nil {
 		panic(fmt.Errorf("failed to create file %s: %w", opts.Filename, err))
 	}
+	defer fs.Close()
 	chartExtractor := &ChartExtractor{
 		ProcessName:            opts.ProcessName,
 		Filename:               opts.Filename,
