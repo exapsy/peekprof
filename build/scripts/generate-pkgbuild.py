@@ -39,7 +39,7 @@ with open('./pkgbuild/peekprof/PKGBUILD', 'w') as pkgbuild:
     content = opening + '\n'
     content += 'pkgname=peekprof\n'
     content += f'pkgver={release_tag}\n'
-    source_url = f'https://github.com/exapsy/peekprof/archive/{release_tag}.tar.gz'
+    source_url = f'https://github.com/exapsy/peekprof/archive/refs/tags/v{release_tag}.tar.gz'
     content += f'source=(peekprof-{release_tag}.tar.gz::{source_url})\n'
     content += 'sha1sums=(SKIP)\n'
     content += open('./build/template/peekprof/PKGBUILD').read() + '\n'
