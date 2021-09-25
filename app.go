@@ -32,6 +32,7 @@ type App struct {
 	host              string
 	eventSourceBroker *httphandler.EventSourceServer
 	server            *http.Server
+	noProfilerOutput  bool
 }
 
 type AppOptions struct {
@@ -43,6 +44,7 @@ type AppOptions struct {
 	CsvFilename      string
 	RefreshInterval  time.Duration
 	ChartLiveUpdates bool
+	NoProfilerOutput bool
 }
 
 func NewApp(opts *AppOptions) *App {
@@ -101,6 +103,7 @@ func NewApp(opts *AppOptions) *App {
 		chartLiveUpdates:  opts.ChartLiveUpdates,
 		eventSourceBroker: esb,
 		server:            server,
+		noProfilerOutput:  opts.NoProfilerOutput,
 	}
 }
 
@@ -157,7 +160,9 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 				if !ok {
 					break LOOP
 				}
-				fmt.Printf("memory usage: %d mb\tcpu usage: %.1f%%\n", pstats.MemoryUsage.Rss/1024, pstats.CpuUsage.Percentage)
+				if !a.noProfilerOutput {
+					fmt.Printf("memory usage: %d mb\tcpu usage: %.1f%%\n", pstats.MemoryUsage.Rss/1024, pstats.CpuUsage.Percentage)
+				}
 				err := a.extractor.Add(extractors.ProcessStatsData{
 					MemoryUsage: extractors.MemoryUsageData{
 						Rss:     pstats.MemoryUsage.Rss,

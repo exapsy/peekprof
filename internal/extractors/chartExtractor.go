@@ -86,6 +86,7 @@ func NewChartExtractor(opts ChartExtractorOptions) *ChartExtractor {
 		if err != nil {
 			panic(fmt.Errorf("could not open file in browser: %w", err))
 		}
+		fmt.Printf("\nLive monitoring is hosted on %s\n\n", fpath)
 		openBrowser(fpath)
 	}
 

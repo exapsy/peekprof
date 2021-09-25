@@ -14,7 +14,7 @@ import (
 func main() {
 	flag.Usage = func() {
 		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-		[-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-live] [-livehost <host>]
+		[-refresh <integer>{ns|ms|s|m}] [-pssoutput] [-parent] [-live] [-livehost <host>] [nooutput]
 
 		-pid Track a running process
 
@@ -33,10 +33,13 @@ func main() {
 		-livehost Is the host at which the local running server is running. This is used with -live and -html.
 							[default is localhost:8089]
 
-		-printoutput Print the corresponding output of the process to stdout & stderr
+		-pssoutput Print the corresponding output of the process to stdout & stderr
 		
 		-parent Track the parent of the provided PID. If no parent exists, an error is returned
-						unless -force is provided. If -cmd is provided this is ignored.`,
+						unless -force is provided. If -cmd is provided this is ignored.
+
+		-nooutput Stop printing the profiler's output to console`,
+
 			os.Args[0],
 		)
 		fmt.Println(usage)
@@ -47,8 +50,9 @@ func main() {
 	htmlPtr := flag.String("html", "", "HTML filename")
 	csvPtr := flag.String("csv", "", "CSV filename")
 	refreshInterval := flag.Duration("refresh", 100*time.Millisecond, "The interval at which it refreshes the stats of the process")
-	printOutput := flag.Bool("printoutput", false, "Print the command's stdout and stderr")
-	parent := flag.Bool("parent", false, "profile the parent of the process and all its children, only when no cmd is specified")
+	printPssOutput := flag.Bool("pss-output", false, "Print the command's stdout and stderr")
+	parent := flag.Bool("parent", false, "Profile the parent of the process and all its children, only when no cmd is specified")
+	noOutput := flag.Bool("nooutput", false, "Stop printing the profiler's output to console")
 	live := flag.Bool("live", true, "Combined with -html provides an html file that listens live updates for the process' stats")
 	livehost := flag.String("livehost", "localhost:8089", `Is the host at which the local running server is running.
 		This is used with -live and -html. The profiler automatically opens the file in your browser.
@@ -93,7 +97,7 @@ func main() {
 
 		args := strings.Fields(*cmdPtr)
 		ecmd = exec.Command(args[0], args[1:]...)
-		if *printOutput {
+		if *printPssOutput {
 			ecmd.Stdout = NewCommandStdout()
 			ecmd.Stderr = NewCommandStderr()
 		}
@@ -116,6 +120,7 @@ func main() {
 		RefreshInterval:  *refreshInterval,
 		Host:             *livehost,
 		ChartLiveUpdates: *live,
+		NoProfilerOutput: *noOutput,
 	})
 	a.Start()
 }

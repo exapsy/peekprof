@@ -12,7 +12,7 @@ The profiling is designed to run until the running process terminates. If you wi
 
 ```nosyntax
 Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-  [-refresh <integer>{ns|ms|s|m}] [-printoutput] [-parent] [-live] [-livehost <host>]
+  [-refresh <integer>{ns|ms|s|m}] [-pssoutput] [-parent] [-live] [-livehost <host>] [-nooutput]
 
   -pid Track a running process
 
@@ -31,10 +31,12 @@ Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>]
   -livehost Is the host at which the local running server is running. This is used with -live and -html.
        [default is localhost:8089]
 
-  -printoutput Print the corresponding output of the process to stdout & stderr
+  -pssoutput Print the corresponding output of the process to stdout & stderr
   
   -parent Track the parent of the provided PID. If no parent exists, an error is returned
       unless -force is provided. If -cmd is provided this is ignored.
+
+  -nooutput Stop printing the profiler's output to console`,
 ```
 
 ### Extract CSV and Chart
