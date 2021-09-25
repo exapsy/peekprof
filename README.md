@@ -76,3 +76,7 @@ Current support is for **Linux** and **OSX**.
 - Swap is not currenty supported, thus it is not shown either in the extracted files.
 - `-parent` is supported only in Linux
 - In Linux, the process and process' children metrics are tracked. Currently this behavior is not implemented for OSX.
+
+### License
+
+[MIT](https://github.com/exapsy/peekprof/blob/master/LICENSE) © Apostolis Anastasiou
