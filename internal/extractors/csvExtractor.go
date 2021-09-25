@@ -73,7 +73,10 @@ func (c *CsvMemoryUsage) headers() []string {
 func (c *CsvMemoryUsage) StopAndExtract() error {
 	fmt.Printf("csv has been written at %s\n", c.Filename)
 	c.csvWriter.Flush()
-	c.file.Close()
+	err := c.file.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close csv file")
+	}
 
 	return nil
 }
