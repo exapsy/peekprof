@@ -1,4 +1,4 @@
-<a href="https://aur.archlinux.org/packages/peekprof"><img src="https://img.shields.io/aur/version/peekprof?style=flat-square"/></a>
+<a href="https://aur.archlinux.org/packages/peekprof" target="_blank"><img src="https://img.shields.io/aur/version/peekprof?style=flat-square"/></a>
 
 # Peekprof
 
