@@ -1,3 +1,5 @@
+![Available in AUR](https://img.shields.io/aur/version/peekprof?style=flat-square)
+
 # Peekprof
 
 Get the CPU and Memory usage of a **single process**, monitor it live, and extract it in CSV and HTML. Get the best out of your optimizations.
