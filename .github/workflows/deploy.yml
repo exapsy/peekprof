@@ -32,11 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
+
       - name: Generate PKGBUILD
         run: ./build/scripts/generate-pkgbuild.py
         env:
-          TARGET: ${{ matrix.target }}
-          RELEASE_TAG: ${{ needs.create_release.outputs.release_tag }}
+          RELEASE_TAG: ${{ steps.get_version.outputs.VERSION }}
 
       - name: Publish peekprof to the AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.2.5
