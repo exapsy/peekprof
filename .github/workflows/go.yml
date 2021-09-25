@@ -45,10 +45,10 @@ jobs:
 
     steps:
       - name: Generate PKGBUILD
+        run: ./build/scripts/generate-pkgbuild.py
         env:
           TARGET: ${{ matrix.target }}
           RELEASE_TAG: ${{ needs.create_release.outputs.release_tag }}
-        run: ./build/scripts/generate-pkgbuild.py
 
       - name: Publish peekprof to the AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.2.5
