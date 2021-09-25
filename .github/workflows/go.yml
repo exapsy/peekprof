@@ -35,8 +35,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish AUR package
-
   publish-aur-package:
     needs:
       - generate-tag-files
