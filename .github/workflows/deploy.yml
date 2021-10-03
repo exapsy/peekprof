@@ -49,5 +49,5 @@ jobs:
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: ${{ needs.create_release.outputs.release_tag }}
+          commit_message: ${{ steps.get_version.outputs.VERSION }}
           force_push: "true"
