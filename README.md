@@ -14,7 +14,29 @@ The profiling is designed to run until the running process terminates. If you wi
 
 ```nosyntax
 Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-  [-refresh <integer>{ns|ms|s|m}] [-pssoutput] [-parent] [-live] [-livehost <host>] [-nooutput]
+  [-refresh <integer>{ns|ms|s|m}] [-prc-output] [-parent] [-live] [-livehost <host>] [nooutput]
+
+Output
+
+  The output depends on if you've set the flag -pretty or not.
+
+  With pretty:
+
+  parent id: 5312                                           # (only if -parent is used)
+  command id: 5312                                          # (only if -cmd is used)
+  00:13:09        memory usage: 26 mb      cpu usage: 8.2%% # Loop
+  peak memory: 2 mb                                         # Print peak memory
+  20.852955893s                                             # Print profiling time
+
+  Without pretty (csv friendly except two last lines):
+
+  timestamp, rss kb, %%cpu                                           # Print csv heading
+  2021-10-04 00:14:12.635316944 +0300 EEST m=+11.947601412,2956,0.0  # Loop
+  peak memory: 2 mb                                                  # Print peak memory
+  20.852955893s                                                      # Print profiling time
+
+
+Flags
 
   -pid Track a running process
 
@@ -38,7 +60,9 @@ Usage: peekprof {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>]
   -parent Track the parent of the provided PID. If no parent exists, an error is returned
       unless -force is provided. If -cmd is provided this is ignored.
 
-  -nooutput Stop printing the profiler's output to console`,
+  -pretty Print in a more human-friendly - non-csv format, and print the pid of the running process.
+
+  -nooutput Stop printing the profiler's output to console
 ```
 
 ### Extract CSV and Chart

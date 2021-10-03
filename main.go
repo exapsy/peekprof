@@ -14,7 +14,29 @@ import (
 func main() {
 	flag.Usage = func() {
 		usage := fmt.Sprintf(`Usage: %s {-pid <pid>|-cmd <command>} [-html <filename>] [-csv <filename>] [-printoutput]
-		[-refresh <integer>{ns|ms|s|m}] [-pssoutput] [-parent] [-live] [-livehost <host>] [nooutput]
+		[-refresh <integer>{ns|ms|s|m}] [-prc-output] [-parent] [-live] [-livehost <host>] [nooutput]
+
+Output
+
+		The output depends on if you've set the flag -pretty or not.
+
+		With pretty:
+
+		parent id: 5312                                           # (only if -parent is used)
+		command id: 5312                                          # (only if -cmd is used)
+		00:13:09        memory usage: 26 mb      cpu usage: 8.2%% # Loop
+		peak memory: 2 mb                                         # Print peak memory
+		20.852955893s                                             # Print profiling time
+
+		Without pretty (csv friendly except two last lines):
+
+		timestamp, rss kb, %%cpu                                           # Print csv heading
+		2021-10-04 00:14:12.635316944 +0300 EEST m=+11.947601412,2956,0.0  # Loop
+		peak memory: 2 mb                                                  # Print peak memory
+		20.852955893s                                                      # Print profiling time
+
+
+Flags
 
 		-pid Track a running process
 
@@ -38,6 +60,8 @@ func main() {
 		-parent Track the parent of the provided PID. If no parent exists, an error is returned
 						unless -force is provided. If -cmd is provided this is ignored.
 
+		-pretty Print in a more human-friendly - non-csv format, and print the pid of the running process.
+
 		-nooutput Stop printing the profiler's output to console`,
 
 			os.Args[0],
@@ -45,18 +69,21 @@ func main() {
 		fmt.Println(usage)
 	}
 
-	pidPtr := flag.Int("pid", 0, "PID of the process")
-	cmdPtr := flag.String("cmd", "", "Command to run")
-	htmlPtr := flag.String("html", "", "HTML filename")
-	csvPtr := flag.String("csv", "", "CSV filename")
-	refreshInterval := flag.Duration("refresh", 100*time.Millisecond, "The interval at which it refreshes the stats of the process")
-	printPssOutput := flag.Bool("pss-output", false, "Print the command's stdout and stderr")
+	defaultRefreshInterval := 100 * time.Millisecond
+
+	pidPtr := flag.Int("pid", 0, "Track a process by its PID")
+	cmdPtr := flag.String("cmd", "", "Track a command by running it")
+	htmlPtr := flag.String("html", "", "Extract a chart into an HTML file")
+	csvPtr := flag.String("csv", "", "Extract timestamped memory data into a csv")
+	refreshInterval := flag.Duration("refresh", defaultRefreshInterval, "The interval at which it checks the memory usage of the process [default is"+defaultRefreshInterval.String()+"]")
+	printPssOutput := flag.Bool("prc-output", false, "Print the command's stdout and stderr")
 	parent := flag.Bool("parent", false, "Profile the parent of the process and all its children, only when no cmd is specified")
 	noOutput := flag.Bool("nooutput", false, "Stop printing the profiler's output to console")
 	live := flag.Bool("live", true, "Combined with -html provides an html file that listens live updates for the process' stats")
 	livehost := flag.String("livehost", "localhost:8089", `Is the host at which the local running server is running.
 		This is used with -live and -html. The profiler automatically opens the file in your browser.
 	`)
+	pretty := flag.Bool("pretty", false, "Print in a more human-friendly - non-csv format, and print the pid of the running process.")
 
 	flag.Parse()
 
@@ -87,8 +114,10 @@ func main() {
 			if ppid > 0 {
 				pidPtr = &ppid
 			}
+			if *pretty {
+				fmt.Printf("parent pid: %d\n", *pidPtr)
+			}
 		}
-		fmt.Printf("pid: %d\n", *pidPtr)
 	} else {
 		if *cmdPtr == "" {
 			flag.Usage()
@@ -108,7 +137,9 @@ func main() {
 		}
 
 		pidPtr = &ecmd.Process.Pid
-		fmt.Printf("running command pid: %d\n", *pidPtr)
+		if *pretty {
+			fmt.Printf("running command pid: %d\n", *pidPtr)
+		}
 	}
 
 	a := NewApp(&AppOptions{
@@ -121,6 +152,7 @@ func main() {
 		Host:             *livehost,
 		ChartLiveUpdates: *live,
 		NoProfilerOutput: *noOutput,
+		Pretty:           *pretty,
 	})
 	a.Start()
 }

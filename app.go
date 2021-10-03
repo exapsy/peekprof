@@ -33,6 +33,7 @@ type App struct {
 	eventSourceBroker *httphandler.EventSourceServer
 	server            *http.Server
 	noProfilerOutput  bool
+	pretty            bool
 }
 
 type AppOptions struct {
@@ -45,6 +46,7 @@ type AppOptions struct {
 	RefreshInterval  time.Duration
 	ChartLiveUpdates bool
 	NoProfilerOutput bool
+	Pretty           bool
 }
 
 func NewApp(opts *AppOptions) *App {
@@ -104,6 +106,7 @@ func NewApp(opts *AppOptions) *App {
 		eventSourceBroker: esb,
 		server:            server,
 		noProfilerOutput:  opts.NoProfilerOutput,
+		pretty:            opts.Pretty,
 	}
 }
 
@@ -152,6 +155,9 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		defer a.cancel()
+		if !a.pretty {
+			fmt.Printf("timestamp, rss kb, %%cpu\n")
+		}
 		ch := a.process.WatchStats(a.ctx, a.refreshInterval)
 	LOOP:
 		for {
@@ -160,9 +166,22 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 				if !ok {
 					break LOOP
 				}
+
 				if !a.noProfilerOutput {
-					fmt.Printf("memory usage: %d mb\tcpu usage: %.1f%%\n", pstats.MemoryUsage.Rss/1024, pstats.CpuUsage.Percentage)
+					if !a.pretty {
+						fmt.Printf("%s,%d,%.1f\n", pstats.Timestamp, pstats.MemoryUsage.Rss, pstats.CpuUsage.Percentage)
+					} else {
+						fmt.Printf(
+							"%02d:%02d:%02d\tmemory usage: %d mb\tcpu usage: %.1f%%\n",
+							pstats.Timestamp.Hour(),
+							pstats.Timestamp.Minute(),
+							pstats.Timestamp.Second(),
+							pstats.MemoryUsage.Rss/1024,
+							pstats.CpuUsage.Percentage,
+						)
+					}
 				}
+
 				err := a.extractor.Add(extractors.ProcessStatsData{
 					MemoryUsage: extractors.MemoryUsageData{
 						Rss:     pstats.MemoryUsage.Rss,
