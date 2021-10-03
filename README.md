@@ -60,7 +60,7 @@ Flags
   -parent Track the parent of the provided PID. If no parent exists, an error is returned
       unless -force is provided. If -cmd is provided this is ignored.
 
-  -pretty Print in a more human-friendly - non-csv format, and print the pid of the running process.
+  -pretty Print in a more human-friendly - non-csv format, and print the pid of the running process if -cmd or -parent is used.
 
   -nooutput Stop printing the profiler's output to console
 ```
