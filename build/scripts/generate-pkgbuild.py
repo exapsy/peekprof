@@ -12,6 +12,8 @@ if not release_tag:
     print('::error ::RELEASE_TAG is required but missing')
     exit(1)
 
+arch_release_tag = release_tag.replace("-rc.", "rc")
+
 # sha1sum_lines = open('checksums/sha1sum.txt').readlines()
 word_splitter = re.compile(r'\s+')
 
@@ -38,7 +40,7 @@ makedirs('./pkgbuild/peekprof', exist_ok=True)
 with open('./pkgbuild/peekprof/PKGBUILD', 'w') as pkgbuild:
     content = opening + '\n'
     content += 'pkgname=peekprof\n'
-    content += f'pkgver={release_tag}\n'
+    content += f'pkgver={arch_release_tag}\n'
     source_url = f'https://github.com/exapsy/peekprof/archive/refs/tags/v{release_tag}.tar.gz'
     content += f'source=(peekprof-{release_tag}.tar.gz::{source_url})\n'
     content += 'sha1sums=(SKIP)\n'
