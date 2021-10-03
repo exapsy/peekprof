@@ -24,6 +24,7 @@ _peekprof() {
 '-livehost[host for the server which provides the live data]:' \
 '-printoutput[show output of the command]' \
 '-parent[monitor the parent and its children of the process provided by -pid]' \
+'-pretty[Print in a more human-friendly - non-csv format]' \
 && ret=0
 }
 
