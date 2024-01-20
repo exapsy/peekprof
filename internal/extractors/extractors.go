@@ -8,6 +8,7 @@ import (
 type MemoryUsageData struct {
 	Rss     int64
 	RssSwap int64
+	Virtual int64
 }
 
 type CpuUsageData struct {

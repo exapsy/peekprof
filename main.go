@@ -84,6 +84,7 @@ Flags
 		This is used with -live and -html. The profiler automatically opens the file in your browser.
 	`)
 	pretty := flag.Bool("pretty", false, "Print in a more human-friendly - non-csv format, and print the pid of the running process.")
+	showConsole := flag.Bool("console", true, "Show the console output of the process")
 
 	flag.Parse()
 
@@ -153,6 +154,7 @@ Flags
 		ChartLiveUpdates: *live,
 		NoProfilerOutput: *noOutput,
 		Pretty:           *pretty,
+		ShowConsole:      *showConsole,
 	})
 	a.Start()
 }

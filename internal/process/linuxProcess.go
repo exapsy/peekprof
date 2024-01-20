@@ -207,6 +207,28 @@ func (p *LinuxProcess) GetCpuUsage() (CpuUsage, error) {
 	}, nil
 }
 
+func (p *LinuxProcess) GetVirtualMem() (int64, error) {
+	cmd := fmt.Sprintf(`grep VmSize /proc/%d/status | awk '{print $2}'`, p.Pid)
+	output, err := exec.Command("bash", "-c", cmd).Output()
+	if err != nil {
+		if err.Error() != "signal: interrupt" {
+			return 0, fmt.Errorf("failed executing command %s: %s", cmd, err)
+		}
+	}
+
+	outputStr := strings.Trim(string(output), "\n ")
+	if len(output) == 0 {
+		return 0, nil
+	}
+
+	memUsage, err := strconv.ParseInt(outputStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert output %q to int: %w", outputStr, err)
+	}
+
+	return memUsage, nil
+}
+
 func (p *LinuxProcess) GetMemoryUsage() (MemoryUsage, error) {
 	emptymu := MemoryUsage{}
 
@@ -219,10 +241,15 @@ func (p *LinuxProcess) GetMemoryUsage() (MemoryUsage, error) {
 		return emptymu, fmt.Errorf("failed getting process rss with swap: %w", err)
 	}
 	rssSwap := rss + swap
+	virtMem, err := p.GetVirtualMem()
+	if err != nil {
+		return emptymu, fmt.Errorf("failed getting process virtual memory: %w", err)
+	}
 
 	return MemoryUsage{
 		Rss:     rss,
 		RssSwap: rssSwap,
+		Virtual: virtMem,
 	}, nil
 }
 

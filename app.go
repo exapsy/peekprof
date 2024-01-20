@@ -34,6 +34,7 @@ type App struct {
 	server            *http.Server
 	noProfilerOutput  bool
 	pretty            bool
+	showConsole       bool
 }
 
 type AppOptions struct {
@@ -47,6 +48,7 @@ type AppOptions struct {
 	ChartLiveUpdates bool
 	NoProfilerOutput bool
 	Pretty           bool
+	ShowConsole      bool
 }
 
 func NewApp(opts *AppOptions) *App {
@@ -66,7 +68,7 @@ func NewApp(opts *AppOptions) *App {
 		opts.Host = "localhost:8089"
 	}
 
-	exts := []interface{}{}
+	var exts []interface{}
 	if opts.CsvFilename != "" {
 		csvExtractorOpts := extractors.NewCsvExtractorOptions(opts.CsvFilename)
 		exts = append(exts, csvExtractorOpts)
@@ -107,6 +109,7 @@ func NewApp(opts *AppOptions) *App {
 		server:            server,
 		noProfilerOutput:  opts.NoProfilerOutput,
 		pretty:            opts.Pretty,
+		showConsole:       opts.ShowConsole,
 	}
 }
 
@@ -155,8 +158,8 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		defer a.cancel()
-		if !a.pretty {
-			fmt.Printf("timestamp, rss kb, %%cpu\n")
+		if a.showConsole && !a.pretty {
+			fmt.Printf("timestamp, rss kb, virtual kb, %%cpu\n")
 		}
 		ch := a.process.WatchStats(a.ctx, a.refreshInterval)
 	LOOP:
@@ -167,25 +170,40 @@ func (a *App) watchMemoryUsage(wg *sync.WaitGroup) {
 					break LOOP
 				}
 
+				// TODO make console an extractor instead to skip this goto ~~logic~~ atrocity
+				if !a.showConsole {
+					goto skipConsole
+				}
+
 				if !a.noProfilerOutput {
 					if !a.pretty {
-						fmt.Printf("%s,%d,%.1f\n", pstats.Timestamp, pstats.MemoryUsage.Rss, pstats.CpuUsage.Percentage)
+						fmt.Printf(
+							"%s,%d,%d,%.1f\n",
+							pstats.Timestamp,
+							pstats.MemoryUsage.Rss,
+							pstats.MemoryUsage.Virtual,
+							pstats.CpuUsage.Percentage,
+						)
 					} else {
 						fmt.Printf(
-							"%02d:%02d:%02d\tmemory usage: %d mb\tcpu usage: %.1f%%\n",
+							"%02d:%02d:%02d\tmemory usage: %d mb\tvirtual: %d mb\tcpu usage: %.1f%%\n",
 							pstats.Timestamp.Hour(),
 							pstats.Timestamp.Minute(),
 							pstats.Timestamp.Second(),
 							pstats.MemoryUsage.Rss/1024,
+							pstats.MemoryUsage.Virtual/1024,
 							pstats.CpuUsage.Percentage,
 						)
 					}
 				}
 
+			skipConsole:
+
 				err := a.extractor.Add(extractors.ProcessStatsData{
 					MemoryUsage: extractors.MemoryUsageData{
 						Rss:     pstats.MemoryUsage.Rss,
 						RssSwap: pstats.MemoryUsage.RssSwap,
+						Virtual: pstats.MemoryUsage.Virtual,
 					},
 					CpuUsage: extractors.CpuUsageData{
 						Percentage: pstats.CpuUsage.Percentage,

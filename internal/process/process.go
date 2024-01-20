@@ -13,6 +13,7 @@ import (
 type MemoryUsage struct {
 	Rss     int64 `json:"rss"`
 	RssSwap int64 `json:"rssSwap"`
+	Virtual int64 `json:"virtual"`
 }
 
 type CpuUsage struct {

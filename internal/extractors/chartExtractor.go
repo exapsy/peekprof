@@ -198,6 +198,9 @@ func (m *ChartExtractor) generateMemoryUsageChart(withLiveUpdatesListener bool) 
 		line.AddSeries("RSS+Swap", rssSwapLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"}))
 	}
 
+	virtualMemLine := m.getVirtualMemLineData()
+	line.AddSeries("Virtual", virtualMemLine, charts.WithLabelOpts(opts.Label{Show: true, Position: "top"}))
+
 	if m.UpdateLiveListenWSHost != "" && withLiveUpdatesListener {
 		m.AddMemoryLineLiveUpdateJSFuncs(line)
 	}
@@ -318,6 +321,14 @@ func (m *ChartExtractor) getRssSwapLineData() []opts.LineData {
 	items := make([]opts.LineData, len(m.Data))
 	for i := 0; i < len(m.Data); i++ {
 		items[i] = opts.LineData{Value: m.Data[i].MemoryUsage.RssSwap / 1024}
+	}
+	return items
+}
+
+func (m *ChartExtractor) getVirtualMemLineData() []opts.LineData {
+	items := make([]opts.LineData, len(m.Data))
+	for i := 0; i < len(m.Data); i++ {
+		items[i] = opts.LineData{Value: m.Data[i].MemoryUsage.Virtual / 1024}
 	}
 	return items
 }

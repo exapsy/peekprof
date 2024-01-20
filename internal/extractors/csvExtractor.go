@@ -49,12 +49,13 @@ func (c *CsvMemoryUsage) dataToCsvRecord(data ProcessStatsData) []string {
 	timestamp := data.Timestamp.Local().Format(time.RFC3339)
 	rss := fmt.Sprintf("%d", data.MemoryUsage.Rss)
 	rssSwap := fmt.Sprintf("%d", data.MemoryUsage.RssSwap)
+	virt := fmt.Sprintf("%d", data.MemoryUsage.Virtual)
 	cpuPercent := fmt.Sprintf("%.1f", data.CpuUsage.Percentage)
 
 	if runtime.GOOS != "darwin" {
-		r = []string{timestamp, rss, rssSwap, cpuPercent}
+		r = []string{timestamp, rss, rssSwap, virt, cpuPercent}
 	} else {
-		r = []string{timestamp, rss, cpuPercent}
+		r = []string{timestamp, rss, virt, cpuPercent}
 	}
 
 	return r
@@ -63,9 +64,9 @@ func (c *CsvMemoryUsage) dataToCsvRecord(data ProcessStatsData) []string {
 func (c *CsvMemoryUsage) headers() []string {
 	var headers []string
 	if runtime.GOOS != "darwin" {
-		headers = []string{"timestamp", "rss kb", "rss+swap kb", "cpu%"}
+		headers = []string{"timestamp", "rss kb", "rss+swap kb", "virtual kb", "cpu%"}
 	} else {
-		headers = []string{"timestamp", "rss kb", "cpu%"}
+		headers = []string{"timestamp", "rss kb", "virtual kb", "cpu%"}
 	}
 	return headers
 }
